@@ -1,5 +1,6 @@
 using Fresh.Query;
 using Fresh.Query.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
@@ -31,9 +32,12 @@ internal class MyComputation : IComputation
 
 internal class Program
 {
-    public static void Main(string[] args) => CreateHostBuilder(args)
-        .Build()
-        .Run();
+    public static void Main(string[] args)
+    {
+        var host = CreateHostBuilder(args).Build();
+        var comp = host.Services.GetRequiredService<IComputation>();
+        var a = comp.CustomComputation("x", 4);
+    }
 
     public static IHostBuilder CreateHostBuilder(string[] args) => Host
         .CreateDefaultBuilder(args)

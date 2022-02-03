@@ -166,7 +166,19 @@ using System.Collections.Generic;
 {prefix}
     partial interface {model.Symbol.Name} : IInputQueryGroup
     {{
-        {string.Join("\n", model.InputQueries.Select(ToSource))}
+        {string.Join("\n", model.InputQueries.Select(ToSetterSource))}
+
+        public sealed class Proxy : {model.Symbol.Name}
+        {{
+            private readonly IQuerySystem querySystem;
+
+            public Proxy(IQuerySystem querySystem)
+            {{
+                this.querySystem = querySystem;
+            }}
+
+            {string.Join("\n", model.InputQueries.Select(ToProxySource))}
+        }}
     }}
 {suffix}
 ";
@@ -183,16 +195,27 @@ using System.Collections.Generic;
 {prefix}
     partial interface {model.Symbol.Name} : IQueryGroup
     {{
-        {string.Join("\n", model.Queries.Select(ToSource))}
+        public sealed class Proxy : {model.Symbol.Name}
+        {{
+            private readonly IQuerySystem querySystem;
+            private readonly {model.Symbol.Name} implementation;
+
+            public Proxy(IQuerySystem querySystem, {model.Symbol.Name} implementation)
+            {{
+                this.querySystem = querySystem;
+                this.implementation = implementation;
+            }}
+
+            {string.Join("\n", model.Queries.Select(ToProxySource))}
+        }}
     }}
 {suffix}
 ";
         return (model.Symbol.Name, source);
     }
 
-    private static string ToSource(InputQueryModel model)
+    private static string ToSetterSource(InputQueryModel model)
     {
-        // TODO
         var visibility = AccessibilityToString(model.Symbol.DeclaredAccessibility);
         if (model.Symbol is IPropertySymbol prop)
         {
@@ -204,13 +227,17 @@ using System.Collections.Generic;
             var valueName = "value";
             if (model.Keys.Any(p => p.Name == valueName)) valueName = $"value{model.Keys.Count}";
             var args = $"{string.Join(string.Empty, model.Keys.Select(param => $"{param.Type.ToDisplayString()} {param.Name}, "))}{model.StoredType.ToDisplayString()} {valueName}";
-            return $@"
-{AccessibilityToString(method.DeclaredAccessibility)} {model.StoredType.ToDisplayString()} Set{method.Name}({args});
-";
+            return $@"{AccessibilityToString(method.DeclaredAccessibility)} {model.StoredType.ToDisplayString()} Set{method.Name}({args});";
         }
     }
 
-    private static string ToSource(QueryModel model)
+    private static string ToProxySource(InputQueryModel model)
+    {
+        // TODO
+        return string.Empty;
+    }
+
+    private static string ToProxySource(QueryModel model)
     {
         // TODO
         return string.Empty;

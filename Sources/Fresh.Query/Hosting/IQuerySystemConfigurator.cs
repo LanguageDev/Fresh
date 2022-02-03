@@ -30,6 +30,6 @@ public interface IQuerySystemConfigurator
     /// <typeparam name="TImpl">The qzery group implementation.</typeparam>
     /// <returns>The configurator instance.</returns>
     public IQuerySystemConfigurator AddQueryGroup<TInterface, TImpl>()
-        where TInterface : IQueryGroup
-        where TImpl : TInterface;
+        where TInterface : class, IQueryGroup
+        where TImpl : class, TInterface;
 }

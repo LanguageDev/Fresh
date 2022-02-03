@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Fresh.Query.Internal;
 using Microsoft.Extensions.Hosting;
 
 namespace Fresh.Query.Hosting;
@@ -20,8 +21,7 @@ public static class HostBuilderExtensions
     /// <returns>The <paramref name="builder"/> itself.</returns>
     public static IHostBuilder ConfigureQuerySystem(this IHostBuilder builder, Action<IQuerySystemConfigurator> configure)
     {
-        // TODO
-        throw new NotImplementedException();
+        configure(new QuerySystemConfigurator(builder));
         return builder;
     }
 }
