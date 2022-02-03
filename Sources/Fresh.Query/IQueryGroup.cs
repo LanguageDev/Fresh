@@ -4,11 +4,15 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Fresh.Query;
 
-[AttributeUsage(AttributeTargets.Interface)]
-public sealed class QueryGroupAttribute : Attribute
+/// <summary>
+/// Marker interface for query groups.
+/// </summary>
+public interface IQueryGroup
 {
 }

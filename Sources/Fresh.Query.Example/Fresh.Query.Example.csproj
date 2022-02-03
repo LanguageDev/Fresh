@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Fresh.Query\Fresh.Query.csproj" />
     <ProjectReference Include="..\Fresh.Query.Generator\Fresh.Query.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="False" />
   </ItemGroup>
 

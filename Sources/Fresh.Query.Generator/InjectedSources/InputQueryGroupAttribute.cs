@@ -6,6 +6,7 @@ using System;
 
 namespace Fresh.Query;
 
+[AttributeUsage(AttributeTargets.Interface)]
 public sealed class InputQueryGroupAttribute : Attribute
 {
 }
