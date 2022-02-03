@@ -161,6 +161,7 @@ public sealed class QueryProxyGenerator : IIncrementalGenerator
         var (prefix, suffix) = GetTypeEnclosure(model.Symbol);
 
         var source = $@"
+using System;
 using Fresh.Query;
 using System.Collections.Generic;
 {prefix}
@@ -177,11 +178,12 @@ using System.Collections.Generic;
                 this.querySystem = querySystem;
             }}
 
-            {string.Join("\n", model.InputQueries.Select(ToProxySource))}
+            {string.Join("\n", model.InputQueries.Select(q => ToProxySource(model, q)))}
         }}
     }}
 {suffix}
 ";
+
         return (model.Symbol.Name, source);
     }
 
@@ -190,6 +192,7 @@ using System.Collections.Generic;
         var (prefix, suffix) = GetTypeEnclosure(model.Symbol);
 
         var source = $@"
+using System;
 using Fresh.Query;
 using System.Collections.Generic;
 {prefix}
@@ -206,7 +209,7 @@ using System.Collections.Generic;
                 this.implementation = implementation;
             }}
 
-            {string.Join("\n", model.Queries.Select(ToProxySource))}
+            {string.Join("\n", model.Queries.Select(q => ToProxySource(model, q)))}
         }}
     }}
 {suffix}
@@ -227,20 +230,58 @@ using System.Collections.Generic;
             var valueName = "value";
             if (model.Keys.Any(p => p.Name == valueName)) valueName = $"value{model.Keys.Count}";
             var args = $"{string.Join(string.Empty, model.Keys.Select(param => $"{param.Type.ToDisplayString()} {param.Name}, "))}{model.StoredType.ToDisplayString()} {valueName}";
-            return $@"{AccessibilityToString(method.DeclaredAccessibility)} {model.StoredType.ToDisplayString()} Set{method.Name}({args});";
+            return $@"{visibility} void Set{method.Name}({args});";
         }
     }
 
-    private static string ToProxySource(InputQueryModel model)
+    private static string ToProxySource(InputQueryGroupModel groupModel, InputQueryModel model)
     {
-        // TODO
-        return string.Empty;
+        if (model.Symbol is IPropertySymbol prop)
+        {
+            return $@"
+{prop.Type.ToDisplayString()} {groupModel.Symbol.Name}.{prop.Name}
+{{
+    get => throw new NotImplementedException();
+    set => throw new NotImplementedException();
+}}
+";
+        }
+        else
+        {
+            // Need both a getter and a setter
+            var method = (IMethodSymbol)model.Symbol;
+            var args = string.Join(", ", model.Keys.Select(param => $"{param.Type.ToDisplayString()} {param.Name}"));
+            var valueName = "value";
+            if (model.Keys.Any(p => p.Name == valueName)) valueName = $"value{model.Keys.Count}";
+            var setterArgs = args.Length == 0 ? valueName : $"{args}, {model.StoredType.ToDisplayString()} {valueName}";
+            return $@"
+{model.StoredType.ToDisplayString()} {groupModel.Symbol.Name}.{method.Name}({args}) =>
+    throw new NotImplementedException();
+
+void {groupModel.Symbol.Name}.Set{method.Name}({setterArgs}) =>
+    throw new NotImplementedException();
+";
+        }
     }
 
-    private static string ToProxySource(QueryModel model)
+    private static string ToProxySource(QueryGroupModel groupModel, QueryModel model)
     {
-        // TODO
-        return string.Empty;
+        if (model.Symbol is IPropertySymbol prop)
+        {
+            return $@"
+{prop.Type.ToDisplayString()} {groupModel.Symbol.Name}.{prop.Name} =>
+    throw new NotImplementedException();
+";
+        }
+        else
+        {
+            var method = (IMethodSymbol)model.Symbol;
+            var args = string.Join(", ", model.Keys.Select(param => $"{param.Type.ToDisplayString()} {param.Name}"));
+            return $@"
+{method.ReturnType.ToDisplayString()} {groupModel.Symbol.Name}.{method.Name}({args}) =>
+    throw new NotImplementedException();
+";
+        }
     }
 
     private static TypeEnclosure GetTypeEnclosure(INamedTypeSymbol symbol)
