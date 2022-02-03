@@ -26,7 +26,7 @@ public sealed class QueryProxyGenerator : IIncrementalGenerator
 
     private sealed record class InputQueryModel(
         ISymbol Symbol,
-        IReadOnlyList<ITypeSymbol> Keys,
+        IReadOnlyList<IParameterSymbol> Keys,
         ITypeSymbol StoredType);
 
     private sealed record class InputQueryGroupModel(
@@ -35,7 +35,7 @@ public sealed class QueryProxyGenerator : IIncrementalGenerator
 
     private sealed record class QueryModel(
         ISymbol Symbol,
-        IReadOnlyList<ITypeSymbol> Keys,
+        IReadOnlyList<IParameterSymbol> Keys,
         ITypeSymbol ReturnType,
         ITypeSymbol? AwaitedType,
         bool HasCancellationToken);
@@ -91,14 +91,14 @@ public sealed class QueryProxyGenerator : IIncrementalGenerator
             {
                 inputQueries.Add(new(
                     Symbol: member,
-                    Keys: ImmutableArray<INamedTypeSymbol>.Empty,
+                    Keys: ImmutableArray<IParameterSymbol>.Empty,
                     StoredType: prop.Type));
             }
             else if (member is IMethodSymbol method)
             {
                 inputQueries.Add(new(
                     Symbol: member,
-                    Keys: method.Parameters.Select(p => p.Type).ToList(),
+                    Keys: method.Parameters,
                     StoredType: method.ReturnType));
             }
         }
@@ -111,23 +111,23 @@ public sealed class QueryProxyGenerator : IIncrementalGenerator
         SourceProductionContext context)
     {
         var queries = new List<QueryModel>();
-        var symbol = (INamedTypeSymbol)compilation
+        var symbol = compilation
             .GetSemanticModel(syntax.SyntaxTree)
             .GetDeclaredSymbol(syntax)!;
         foreach (var member in IgnorePropertyMethods(symbol.GetMembers()))
         {
-            IReadOnlyList<ITypeSymbol> keys;
+            IReadOnlyList<IParameterSymbol> keys;
             ITypeSymbol returnType;
             ITypeSymbol? awaitedType = null;
             bool hasCt = false;
             if (member is IPropertySymbol prop)
             {
-                keys = ImmutableArray<INamedTypeSymbol>.Empty;
+                keys = ImmutableArray<IParameterSymbol>.Empty;
                 returnType = prop.Type;
             }
             else if (member is IMethodSymbol method)
             {
-                keys = method.Parameters.Select(p => p.Type).ToList();
+                keys = method.Parameters;
                 returnType = method.ReturnType;
                 // Determine, if has CT
                 if (keys.Count > 0 && keys[keys.Count - 1].Name == typeof(CancellationToken).FullName)
@@ -166,6 +166,7 @@ using System.Collections.Generic;
 {prefix}
     partial interface {model.Symbol.Name} : IInputQueryGroup
     {{
+        {string.Join("\n", model.InputQueries.Select(ToSource))}
     }}
 {suffix}
 ";
@@ -182,6 +183,7 @@ using System.Collections.Generic;
 {prefix}
     partial interface {model.Symbol.Name} : IQueryGroup
     {{
+        {string.Join("\n", model.Queries.Select(ToSource))}
     }}
 {suffix}
 ";
@@ -190,12 +192,28 @@ using System.Collections.Generic;
 
     private static string ToSource(InputQueryModel model)
     {
-        throw new NotImplementedException();
+        // TODO
+        var visibility = AccessibilityToString(model.Symbol.DeclaredAccessibility);
+        if (model.Symbol is IPropertySymbol prop)
+        {
+            return string.Empty;
+        }
+        else
+        {
+            var method = (IMethodSymbol)model.Symbol;
+            var valueName = "value";
+            if (model.Keys.Any(p => p.Name == valueName)) valueName = $"value{model.Keys.Count}";
+            var args = $"{string.Join(string.Empty, model.Keys.Select(param => $"{param.Type.ToDisplayString()} {param.Name}, "))}{model.StoredType.ToDisplayString()} {valueName}";
+            return $@"
+{AccessibilityToString(method.DeclaredAccessibility)} {model.StoredType.ToDisplayString()} Set{method.Name}({args});
+";
+        }
     }
 
     private static string ToSource(QueryModel model)
     {
-        throw new NotImplementedException();
+        // TODO
+        return string.Empty;
     }
 
     private static TypeEnclosure GetTypeEnclosure(INamedTypeSymbol symbol)
@@ -259,6 +277,16 @@ using System.Collections.Generic;
         TypeKind.Struct when !symbol.IsRecord => "struct",
         TypeKind.Interface => "interface",
         _ => throw new ArgumentOutOfRangeException(nameof(symbol)),
+    };
+
+    private static string AccessibilityToString(Accessibility accessibility) => accessibility switch
+    {
+        Accessibility.Public => "public",
+        Accessibility.Internal => "internal",
+        Accessibility.Protected => "protected",
+        Accessibility.Private => "private",
+        Accessibility.NotApplicable => string.Empty,
+        _ => throw new NotImplementedException(),
     };
 
     private static bool IsAwaitable(ITypeSymbol symbol, [MaybeNullWhen(false)] out ITypeSymbol awaitedType)
