@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
@@ -12,6 +13,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
@@ -20,23 +22,25 @@ namespace Fresh.Query;
 [Generator]
 public sealed class QueryProxyGenerator : IIncrementalGenerator
 {
-    private sealed record InputQueryModel(
+    private record class TypeEnclosure(string Prefix, string Suffix);
+
+    private sealed record class InputQueryModel(
         ISymbol Symbol,
         IReadOnlyList<ITypeSymbol> Keys,
         ITypeSymbol StoredType);
 
-    private sealed record InputQueryGroupModel(
+    private sealed record class InputQueryGroupModel(
         INamedTypeSymbol Symbol,
         IReadOnlyList<InputQueryModel> InputQueries);
 
-    private sealed record QueryModel(
+    private sealed record class QueryModel(
         ISymbol Symbol,
         IReadOnlyList<ITypeSymbol> Keys,
         ITypeSymbol ReturnType,
         ITypeSymbol? AwaitedType,
         bool HasCancellationToken);
 
-    private sealed record QueryGroupModel(
+    private sealed record class QueryGroupModel(
         INamedTypeSymbol Symbol,
         IReadOnlyList<QueryModel> Queries);
 
@@ -65,15 +69,11 @@ public sealed class QueryProxyGenerator : IIncrementalGenerator
 
         // Register the generation method for both
         context.RegisterSourceOutput(
-            compilationAndInputQueryGroups,
-            static (spc, source) => MakeGenerationExecutor(
-                ToInputQueryGroupModel,
-                ToSource));
+            compilationAndInputQueryGroups!,
+            MakeGenerationExecutor(ToInputQueryGroupModel, ToSource));
         context.RegisterSourceOutput(
-            compilationAndQueryGroups,
-            static (spc, source) => MakeGenerationExecutor(
-                ToQueryGroupModel,
-                ToSource));
+            compilationAndQueryGroups!,
+            MakeGenerationExecutor(ToQueryGroupModel, ToSource));
     }
 
     private static InputQueryGroupModel ToInputQueryGroupModel(
@@ -158,13 +158,108 @@ public sealed class QueryProxyGenerator : IIncrementalGenerator
 
     private static (string Name, string Text) ToSource(InputQueryGroupModel model)
     {
-        throw new NotImplementedException();
+        var (prefix, suffix) = GetTypeEnclosure(model.Symbol);
+
+        var source = $@"
+using Fresh.Query;
+using System.Collections.Generic;
+{prefix}
+    partial interface {model.Symbol.Name} : IInputQueryGroup
+    {{
+    }}
+{suffix}
+";
+        return (model.Symbol.Name, source);
     }
 
     private static (string Name, string Text) ToSource(QueryGroupModel model)
     {
+        var (prefix, suffix) = GetTypeEnclosure(model.Symbol);
+
+        var source = $@"
+using Fresh.Query;
+using System.Collections.Generic;
+{prefix}
+    partial interface {model.Symbol.Name} : IQueryGroup
+    {{
+    }}
+{suffix}
+";
+        return (model.Symbol.Name, source);
+    }
+
+    private static string ToSource(InputQueryModel model)
+    {
         throw new NotImplementedException();
     }
+
+    private static string ToSource(QueryModel model)
+    {
+        throw new NotImplementedException();
+    }
+
+    private static TypeEnclosure GetTypeEnclosure(INamedTypeSymbol symbol)
+    {
+        var prefixBuilder = new StringBuilder();
+        var suffixBuilder = new StringBuilder();
+
+        // Namespace open
+        if (symbol.ContainingNamespace is not null)
+        {
+            prefixBuilder
+                .Append("namespace ")
+                .AppendLine(symbol.ContainingNamespace.ToDisplayString())
+                .AppendLine("{");
+        }
+
+        // Containing types
+        foreach (var containingType in GetContainingTypeChain(symbol))
+        {
+            prefixBuilder
+                .Append("partial ")
+                .Append(GetTypeKindName(containingType))
+                .Append(' ')
+                .Append(containingType.Name);
+            if (containingType.TypeParameters.Length != 0)
+            {
+                prefixBuilder
+                    .Append('<')
+                    .Append(string.Join(", ", containingType.TypeParameters.Select(t => t.Name)))
+                    .Append('>');
+            }
+            prefixBuilder
+                .AppendLine()
+                .AppendLine("{");
+            suffixBuilder.AppendLine("}");
+        }
+
+        // Namespace close
+        if (symbol.ContainingNamespace is not null) suffixBuilder.AppendLine("}");
+
+        return new(prefixBuilder.ToString(), suffixBuilder.ToString());
+    }
+
+    private static IEnumerable<INamedTypeSymbol> GetContainingTypeChain(INamedTypeSymbol symbol)
+    {
+        static IEnumerable<INamedTypeSymbol> GetContainingTypeChainImpl(INamedTypeSymbol? symbol)
+        {
+            if (symbol is null) yield break;
+            foreach (var item in GetContainingTypeChainImpl(symbol.ContainingType)) yield return item;
+            yield return symbol;
+        }
+
+        return GetContainingTypeChainImpl(symbol.ContainingType);
+    }
+
+    private static string GetTypeKindName(ITypeSymbol symbol) => symbol.TypeKind switch
+    {
+        TypeKind.Class when symbol.IsRecord => "record class",
+        TypeKind.Class when !symbol.IsRecord => "class",
+        TypeKind.Struct when symbol.IsRecord => "record struct",
+        TypeKind.Struct when !symbol.IsRecord => "struct",
+        TypeKind.Interface => "interface",
+        _ => throw new ArgumentOutOfRangeException(nameof(symbol)),
+    };
 
     private static bool IsAwaitable(ITypeSymbol symbol, [MaybeNullWhen(false)] out ITypeSymbol awaitedType)
     {
@@ -197,12 +292,14 @@ public sealed class QueryProxyGenerator : IIncrementalGenerator
                                     && propertyNames.Contains(sym.Name.Substring(4))));
     }
 
-    private static Action<Compilation, ImmutableArray<InterfaceDeclarationSyntax>, SourceProductionContext>
+    private static Action<SourceProductionContext, (Compilation Left, ImmutableArray<InterfaceDeclarationSyntax> Right)>
         MakeGenerationExecutor<TModel>(
             Func<Compilation, InterfaceDeclarationSyntax, SourceProductionContext, TModel> toModel,
             Func<TModel, (string Name, string Text)> toSource
-        ) => (compilation, interfaces, context) =>
+        ) => (context, values) =>
         {
+            var (compilation, interfaces) = values;
+
             // If there are not interfaces, don't attempt to do anything
             if (interfaces.IsEmpty) return;
 
@@ -215,7 +312,12 @@ public sealed class QueryProxyGenerator : IIncrementalGenerator
             // Convert each to source
             foreach (var (name, text) in models.Select(toSource))
             {
-                context.AddSource(name, SourceText.From(text, Encoding.UTF8));
+                var formattedText = SyntaxFactory
+                    .ParseCompilationUnit(text)
+                    .NormalizeWhitespace()
+                    .GetText()
+                    .ToString();
+                context.AddSource($"{name}.Generated", SourceText.From(formattedText, Encoding.UTF8));
             }
         };
 

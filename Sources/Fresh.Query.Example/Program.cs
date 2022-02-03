@@ -10,13 +10,13 @@ using System.Threading.Tasks;
 namespace Fresh.Query.Example;
 
 [InputQueryGroup]
-internal interface INumberInputs
+internal partial interface INumberInputs
 {
     public int Variable(string name);
 }
 
 [QueryGroup]
-internal interface IComputation
+internal partial interface IComputation
 {
     public int CustomConstant { get; }
     public int CustomComputation(string varName, int k);
