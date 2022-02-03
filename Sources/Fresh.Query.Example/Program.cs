@@ -22,7 +22,7 @@ internal interface IComputation
     public int CustomComputation(string varName, int k);
 }
 
-class MyComputation : IComputation
+internal class MyComputation : IComputation
 {
     public int CustomConstant => throw new NotImplementedException();
 

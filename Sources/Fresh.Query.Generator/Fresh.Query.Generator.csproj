@@ -13,6 +13,11 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.0.1" PrivateAssets="all" />
   </ItemGroup>
 
+  <!-- Compile-time dependency -->
+  <ItemGroup>
+    <PackageReference Include="Nullable" Version="1.3.0" PrivateAssets="All" />
+  </ItemGroup>
+
   <!-- If we ever decide to package, this makes sure the SG DLL will be packaged in the proper subfolder -->
   <ItemGroup>
     <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
