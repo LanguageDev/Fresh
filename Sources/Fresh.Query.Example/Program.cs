@@ -35,7 +35,9 @@ internal class Program
     public static void Main(string[] args)
     {
         var host = CreateHostBuilder(args).Build();
+        var val = host.Services.GetRequiredService<INumberInputs>();
         var comp = host.Services.GetRequiredService<IComputation>();
+        val.SetVariable("x", 3);
         var a = comp.CustomComputation("x", 4);
     }
 

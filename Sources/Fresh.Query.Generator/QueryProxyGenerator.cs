@@ -119,7 +119,7 @@ public sealed class QueryProxyGenerator : IIncrementalGenerator
             IReadOnlyList<IParameterSymbol> keys;
             ITypeSymbol returnType;
             ITypeSymbol? awaitedType = null;
-            bool hasCt = false;
+            var hasCt = false;
             if (member is IPropertySymbol prop)
             {
                 keys = ImmutableArray<IParameterSymbol>.Empty;
@@ -163,20 +163,25 @@ public sealed class QueryProxyGenerator : IIncrementalGenerator
         var source = $@"
 using System;
 using Fresh.Query;
+using Fresh.Query.Internal;
 using System.Collections.Generic;
 {prefix}
     partial interface {model.Symbol.Name} : IInputQueryGroup
     {{
         {string.Join("\n", model.InputQueries.Select(ToSetterSource))}
 
-        public sealed class Proxy : {model.Symbol.Name}
+        public sealed class Proxy : {model.Symbol.Name}, IQueryGroupProxy
         {{
             private readonly IQuerySystem querySystem;
 
             public Proxy(IQuerySystem querySystem)
             {{
                 this.querySystem = querySystem;
+                ((IQuerySystemProxyView)this.querySystem).RegisterProxy(this);
             }}
+
+            void IQueryGroupProxy.Clear(Revision revision) =>
+                throw new NotImplementedException();
 
             {string.Join("\n", model.InputQueries.Select(q => ToProxySource(model, q)))}
         }}
@@ -194,11 +199,12 @@ using System.Collections.Generic;
         var source = $@"
 using System;
 using Fresh.Query;
+using Fresh.Query.Internal;
 using System.Collections.Generic;
 {prefix}
     partial interface {model.Symbol.Name} : IQueryGroup
     {{
-        public sealed class Proxy : {model.Symbol.Name}
+        public sealed class Proxy : {model.Symbol.Name}, IQueryGroupProxy
         {{
             private readonly IQuerySystem querySystem;
             private readonly {model.Symbol.Name} implementation;
@@ -207,7 +213,11 @@ using System.Collections.Generic;
             {{
                 this.querySystem = querySystem;
                 this.implementation = implementation;
+                ((IQuerySystemProxyView)this.querySystem).RegisterProxy(this);
             }}
+
+            void IQueryGroupProxy.Clear(Revision revision) =>
+                throw new NotImplementedException();
 
             {string.Join("\n", model.Queries.Select(q => ToProxySource(model, q)))}
         }}

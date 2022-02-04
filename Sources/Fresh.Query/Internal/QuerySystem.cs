@@ -11,11 +11,24 @@ using Fresh.Query.Hosting;
 
 namespace Fresh.Query.Internal;
 
-internal sealed class QuerySystem : IQuerySystem
+internal sealed class QuerySystem : IQuerySystem, IQuerySystemProxyView
 {
-    public bool AllowMemoization { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+    public bool AllowMemoization { get; set; }
 
-    public Revision CurrentRevision => throw new NotImplementedException();
+    public Revision CurrentRevision { get; private set; } = new(0);
 
-    public void Clear(Revision revision) => throw new NotImplementedException();
+    private readonly List<IQueryGroupProxy> proxies = new();
+
+    public void Clear(Revision revision)
+    {
+        foreach (var proxy in this.proxies) proxy.Clear(revision);
+    }
+
+    public void RegisterProxy(IQueryGroupProxy proxy) => this.proxies.Add(proxy);
+
+    public Revision IncrementRevision()
+    {
+        this.CurrentRevision = new(this.CurrentRevision.Number);
+        return this.CurrentRevision;
+    }
 }
