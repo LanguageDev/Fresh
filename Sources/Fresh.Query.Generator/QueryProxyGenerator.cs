@@ -159,6 +159,7 @@ public sealed class QueryProxyGenerator : IIncrementalGenerator
     private static (string Name, string Text) ToSource(InputQueryGroupModel model)
     {
         var (prefix, suffix) = GetTypeEnclosure(model.Symbol);
+        var generics = GetGenerics(model.Symbol);
 
         var source = $@"
 using Fresh.Query;
@@ -169,11 +170,11 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 {prefix}
-    partial interface {model.Symbol.Name} : IInputQueryGroup
+    partial interface {model.Symbol.Name}{generics} : IInputQueryGroup
     {{
         {string.Join("\n", model.InputQueries.Select(ToSetterSource))}
 
-        public sealed class Proxy : {model.Symbol.Name}, IQueryGroupProxy
+        public sealed class Proxy : {model.Symbol.Name}{generics}, IQueryGroupProxy
         {{
             private readonly IQuerySystemProxyView querySystem;
 
@@ -200,6 +201,7 @@ using System.Threading.Tasks;
     private static (string Name, string Text) ToSource(QueryGroupModel model)
     {
         var (prefix, suffix) = GetTypeEnclosure(model.Symbol);
+        var generics = GetGenerics(model.Symbol);
 
         var source = $@"
 using Fresh.Query;
@@ -211,21 +213,21 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 {prefix}
-    partial interface {model.Symbol.Name} : IQueryGroup
+    partial interface {model.Symbol.Name}{generics} : IQueryGroup
     {{
-        public sealed class Proxy : {model.Symbol.Name}, IQueryGroupProxy
+        public sealed class Proxy : {model.Symbol.Name}{generics}, IQueryGroupProxy
         {{
             private readonly IQuerySystemProxyView querySystem;
             private readonly IServiceProvider serviceProvider;
             private readonly Type implementationType;
 
-            private {model.Symbol.Name} implementation;
+            private {model.Symbol.Name}{generics} implementation;
 
-            public {model.Symbol.Name} Implementation
+            public {model.Symbol.Name}{generics} Implementation
             {{
                 get
                 {{
-                    this.implementation ??= ({model.Symbol.Name})this.serviceProvider.GetRequiredService(this.implementationType);
+                    this.implementation ??= ({model.Symbol.Name}{generics})this.serviceProvider.GetRequiredService(this.implementationType);
                     return this.implementation;
                 }}
             }}
@@ -263,15 +265,17 @@ using System.Threading.Tasks;
         else
         {
             var method = (IMethodSymbol)model.Symbol;
+            var generics = GetGenerics(method);
             var valueName = "value";
             if (model.Keys.Any(p => p.Name == valueName)) valueName = $"value{model.Keys.Count}";
             var args = $"{string.Join(string.Empty, model.Keys.Select(param => $"{param.Type.ToDisplayString()} {param.Name}, "))}{model.StoredType.ToDisplayString()} {valueName}";
-            return $@"{visibility} void Set{method.Name}({args});";
+            return $@"{visibility} void Set{method.Name}{generics}({args});";
         }
     }
 
     private static string ToProxySource(InputQueryGroupModel groupModel, InputQueryModel model)
     {
+        var typeGenerics = GetGenerics(groupModel.Symbol);
         // Generate storage
         var storageName = ToStorageName(model.Symbol);
         var storageType = GetStorageType(true, model.Keys, model.StoredType);
@@ -283,7 +287,7 @@ using System.Threading.Tasks;
         {
             return $@"
 private readonly {storageType} {storageName} = new();
-{prop.Type.ToDisplayString()} {groupModel.Symbol.Name}.{prop.Name}
+{prop.Type.ToDisplayString()} {groupModel.Symbol.Name}{typeGenerics}.{prop.Name}
 {{
     get => this.{storageName}.Get({key}, () => new()).GetValue(this.querySystem);
     set => this.{storageName}.Get({key}, () => new()).SetValue(this.querySystem, value);
@@ -294,6 +298,7 @@ private readonly {storageType} {storageName} = new();
         {
             // Need both a getter and a setter
             var method = (IMethodSymbol)model.Symbol;
+            var generics = GetGenerics(method);
             var args = string.Join(", ", model.Keys.Select(param => $"{param.Type.ToDisplayString()} {param.Name}"));
             var valueName = "value";
             if (model.Keys.Any(p => p.Name == valueName)) valueName = $"value{model.Keys.Count}";
@@ -301,9 +306,9 @@ private readonly {storageType} {storageName} = new();
             var setterArgs = args.Length == 0 ? lastArg : $"{args}, {lastArg}";
             return $@"
 private readonly {storageType} {storageName} = new();
-{model.StoredType.ToDisplayString()} {groupModel.Symbol.Name}.{method.Name}({args}) =>
+{model.StoredType.ToDisplayString()} {groupModel.Symbol.Name}{typeGenerics}.{method.Name}{generics}({args}) =>
     this.{storageName}.Get({key}, () => new()).GetValue(this.querySystem);
-void {groupModel.Symbol.Name}.Set{method.Name}({setterArgs}) =>
+void {groupModel.Symbol.Name}{typeGenerics}.Set{method.Name}{generics}({setterArgs}) =>
     this.{storageName}.Get({key}, () => new()).SetValue(this.querySystem, {valueName});
 ";
         }
@@ -311,6 +316,7 @@ void {groupModel.Symbol.Name}.Set{method.Name}({setterArgs}) =>
 
     private static string ToProxySource(QueryGroupModel groupModel, QueryModel model)
     {
+        var typeGenerics = GetGenerics(groupModel.Symbol);
         // Generate storage
         var storageName = ToStorageName(model.Symbol);
         var storedType = model.AwaitedType ?? model.ReturnType;
@@ -328,13 +334,14 @@ void {groupModel.Symbol.Name}.Set{method.Name}({setterArgs}) =>
                 : $"(system, ct) => this.Implementation.{prop.Name}";
             return $@"
 private readonly {storageType} {storageName} = new();
-{prop.Type.ToDisplayString()} {groupModel.Symbol.Name}.{prop.Name} =>
+{prop.Type.ToDisplayString()} {groupModel.Symbol.Name}{typeGenerics}.{prop.Name} =>
     this.{storageName}.Get({key}, () => new({adapter})).GetValueAsync(this.querySystem, CancellationToken.None){awaitSuffix};
 ";
         }
         else
         {
             var method = (IMethodSymbol)model.Symbol;
+            var generics = GetGenerics(method);
             var methodParams = model.Keys.Select(p => (Type: p.Type.ToDisplayString(), Name: p.Name));
             if (model.HasCancellationToken) methodParams = methodParams.Append(("CancellationToken", "cancellationToken"));
             var args = string.Join(", ", methodParams.Select(p => $"{p.Type} {p.Name}"));
@@ -348,7 +355,7 @@ private readonly {storageType} {storageName} = new();
                 : $"(system, ct) => {adapterInvocation}";
             return $@"
 private readonly {storageType} {storageName} = new();
-{method.ReturnType.ToDisplayString()} {groupModel.Symbol.Name}.{method.Name}({args}) =>
+{method.ReturnType.ToDisplayString()} {groupModel.Symbol.Name}{typeGenerics}.{method.Name}{generics}({args}) =>
     this.{storageName}.Get({key}, () => new({adapter})).GetValueAsync(this.querySystem, {ctToPass}){awaitSuffix};
 ";
         }
@@ -377,6 +384,14 @@ private readonly {storageType} {storageName} = new();
         nameChain = nameChain.Append(symbol.Name).Append("Generated");
         return string.Join(".", nameChain);
     }
+
+    private static string GetGenerics(INamedTypeSymbol symbol) => symbol.TypeParameters.Length == 0
+        ? string.Empty
+        : $"<{string.Join(", ", symbol.TypeParameters.Select(p => p.Name))}>";
+
+    private static string GetGenerics(IMethodSymbol symbol) => symbol.TypeParameters.Length == 0
+        ? string.Empty
+        : $"<{string.Join(", ", symbol.TypeParameters.Select(p => p.Name))}>";
 
     private static TypeEnclosure GetTypeEnclosure(INamedTypeSymbol symbol)
     {

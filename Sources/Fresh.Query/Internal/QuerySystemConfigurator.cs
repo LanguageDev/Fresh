@@ -50,7 +50,11 @@ internal sealed class QuerySystemConfigurator : IQuerySystemConfigurator
         return this;
     }
 
-    private static Type GetProxyType(Type tInterface) =>
-           tInterface.GetNestedType("Proxy")
-        ?? throw new InvalidOperationException($"The interface type {tInterface.Name} does not contain a generated proxy!");
+    private static Type GetProxyType(Type tInterface)
+    {
+        var proxyClass = tInterface.GetNestedType("Proxy")
+                      ?? throw new InvalidOperationException($"The interface type {tInterface.Name} does not contain a generated proxy!");
+        if (tInterface.GenericTypeArguments.Length > 0) proxyClass = proxyClass.MakeGenericType(tInterface.GenericTypeArguments);
+        return proxyClass;
+    }
 }
