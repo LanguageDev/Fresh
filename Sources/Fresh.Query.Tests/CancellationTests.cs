@@ -2,12 +2,8 @@
 // Licensed under the Apache License, Version 2.0.
 // Source repository: https://github.com/LanguageDev/Fresh
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Fresh.Query.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -52,7 +48,7 @@ public sealed partial class CancellationTests
         public int ComputeKeyedValue(string s1, string s2, CancellationToken ct)
         {
             if (ct.IsCancellationRequested) return 0;
-            int newCount = 0;
+            var newCount = 0;
             if (this.keyedCount.TryGetValue((s1, s2), out var oldCount)) newCount = oldCount;
             this.keyedCount[(s1, s2)] = newCount + 1;
             return this.inputs.Variable(s1) * this.inputs.Variable(s2);

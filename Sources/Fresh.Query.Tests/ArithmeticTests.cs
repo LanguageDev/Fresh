@@ -1,5 +1,4 @@
 using Xunit;
-using Fresh.Query;
 using System.Collections.Generic;
 using Microsoft.Extensions.Hosting;
 using Fresh.Query.Hosting;
@@ -33,7 +32,7 @@ public sealed partial class ArithmeticTests
     {
         public int V1_invocations = 0;
         public int V2_invocations = 0;
-        public Dictionary<int, int> V3_invocations = new Dictionary<int, int>();
+        public Dictionary<int, int> V3_invocations = new();
 
         public int V1
         {
@@ -186,7 +185,6 @@ public sealed partial class ArithmeticTests
 
         var input = host.Services.GetRequiredService<INumberInputs>();
         var arithProxy = host.Services.GetRequiredService<IArithmetic>();
-        var arith = host.Services.GetRequiredService<MyArithmetic>();
 
         input.SetVariable("a", 1);
         input.SetVariable("b", 2);

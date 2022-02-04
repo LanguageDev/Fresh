@@ -3,8 +3,6 @@
 // Source repository: https://github.com/LanguageDev/Fresh
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Fresh.Query;
 

@@ -1,11 +1,7 @@
-using Fresh.Query;
 using Fresh.Query.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -48,6 +44,7 @@ internal class Program
         var comp = host.Services.GetRequiredService<IComputation>();
         val.SetVariable("x", 3);
         var a = comp.CustomComputation("x", 4, CancellationToken.None);
+        Console.WriteLine($"a = {a}");
     }
 
     public static IHostBuilder CreateHostBuilder(string[] args) => Host

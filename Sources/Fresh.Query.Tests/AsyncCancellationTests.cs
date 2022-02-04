@@ -2,10 +2,7 @@
 // Licensed under the Apache License, Version 2.0.
 // Source repository: https://github.com/LanguageDev/Fresh
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Fresh.Query.Hosting;
@@ -33,7 +30,7 @@ public sealed partial class AsyncCancellationTests
     public sealed class MyAsyncCancellableComputation : IAsyncCancellableComputation
     {
         public int keylessCount = 0;
-        public Dictionary<(string, string), int> keyedCount = new Dictionary<(string, string), int>();
+        public Dictionary<(string, string), int> keyedCount = new();
 
         private readonly INumberInputs inputs;
         private readonly IAsyncCancellableComputation computation;
@@ -56,7 +53,7 @@ public sealed partial class AsyncCancellationTests
             if (cancellationToken.IsCancellationRequested) return 0;
             var v1 = await this.computation.ComputeKeylessValue(cancellationToken);
             if (cancellationToken.IsCancellationRequested) return 0;
-            int newCount = 0;
+            var newCount = 0;
             if (this.keyedCount.TryGetValue((s1, s2), out var oldCount)) newCount = oldCount;
             this.keyedCount[(s1, s2)] = newCount + 1;
             return v1 * this.inputs.Variable(s1) + this.inputs.Variable(s2);

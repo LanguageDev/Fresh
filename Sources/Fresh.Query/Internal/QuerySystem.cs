@@ -4,10 +4,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Fresh.Query.Hosting;
 using Fresh.Query.Results;
 
 namespace Fresh.Query.Internal;
