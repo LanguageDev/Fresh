@@ -18,7 +18,7 @@ public interface IQuerySystem
     /// <summary>
     /// Allows turning on and off memoization.
     /// </summary>
-    public bool AllowMemoization { get; set; }
+    public bool DisableMemoization { get; set; }
 
     /// <summary>
     /// The current revision the system is at.

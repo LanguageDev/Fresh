@@ -257,7 +257,7 @@ using System.Threading;
         // Generate storage
         var storageName = ToStorageName(model.Symbol);
         var storageType = GetStorageType(true, model.Keys, model.StoredType);
-        // Generate getter and setter
+        // Generate getter and setter keys
         var key = $"({string.Join(", ", model.Keys.Select(k => k.Name))})";
         if (model.Keys.Count == 0) key = "false";
         // Generate invoking syntax
@@ -295,24 +295,30 @@ void {groupModel.Symbol.Name}.Set{method.Name}({setterArgs}) =>
         // Generate storage
         var storageName = ToStorageName(model.Symbol);
         var storageType = GetStorageType(false, model.Keys, model.AwaitedType ?? model.ReturnType);
+        // Generate getter keys
+        var key = $"({string.Join(", ", model.Keys.Select(k => k.Name))})";
+        if (model.Keys.Count == 0) key = "false";
+        // Generate getter invocation
+        var awaitSuffix = model.AwaitedType is null ? ".Result" : string.Empty;
         if (model.Symbol is IPropertySymbol prop)
         {
             return $@"
 private readonly {storageType} {storageName} = new();
 {prop.Type.ToDisplayString()} {groupModel.Symbol.Name}.{prop.Name} =>
-    throw new NotImplementedException();
+    this.{storageName}.Get({key}, () => new()).GetValueAsync(this.querySystem, CancellationToken.None){awaitSuffix};
 ";
         }
         else
         {
             var method = (IMethodSymbol)model.Symbol;
-            var methodParams = model.Keys.Select(p => $"{p.Type.ToDisplayString()} {p.Name}");
-            if (model.HasCancellationToken) methodParams = methodParams.Append("CancellationToken cancellationToken");
-            var args = string.Join(", ", methodParams);
+            var methodParams = model.Keys.Select(p => (Type: p.Type.ToDisplayString(), Name: p.Name));
+            if (model.HasCancellationToken) methodParams = methodParams.Append(("CancellationToken", "cancellationToken"));
+            var args = string.Join(", ", methodParams.Select(p => $"{p.Type} {p.Name}"));
+            var ctToPass = model.HasCancellationToken ? "cancellationToken" : "CancellationToken.None";
             return $@"
 private readonly {storageType} {storageName} = new();
 {method.ReturnType.ToDisplayString()} {groupModel.Symbol.Name}.{method.Name}({args}) =>
-    throw new NotImplementedException();
+    this.{storageName}.Get({key}, () => new()).GetValueAsync(this.querySystem, {ctToPass}){awaitSuffix};
 ";
         }
     }

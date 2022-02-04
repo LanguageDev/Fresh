@@ -14,7 +14,7 @@ namespace Fresh.Query.Internal;
 
 internal sealed class QuerySystem : IQuerySystem, IQuerySystemProxyView
 {
-    public bool AllowMemoization { get; set; }
+    public bool DisableMemoization { get; set; } = false;
 
     public Revision CurrentRevision { get; private set; } = new(0);
 

@@ -27,7 +27,7 @@ public sealed class ComputedQueryResult<T> : IQueryResult<T>
 
     public async Task<T> GetValueAsync(IQuerySystemProxyView system, CancellationToken cancellationToken)
     {
-        if (!system.AllowMemoization)
+        if (system.DisableMemoization)
         {
             // We disabled memoization, recompute
             return await this.Recompute(system, cancellationToken);
