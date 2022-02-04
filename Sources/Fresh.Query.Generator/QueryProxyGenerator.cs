@@ -185,7 +185,7 @@ using System.Threading.Tasks;
 
             void IQueryGroupProxy.Clear(Revision revision)
             {{
-                {string.Join("\n", model.InputQueries.Select(q => $"this.{ToStorageName(q.Symbol)}.Clear(revision);"))}
+                // {string.Join("\n", model.InputQueries.Select(q => $"this.{ToStorageName(q.Symbol)}.Clear(revision);"))}
             }}
 
             {string.Join("\n", model.InputQueries.Select(q => ToProxySource(model, q)))}
