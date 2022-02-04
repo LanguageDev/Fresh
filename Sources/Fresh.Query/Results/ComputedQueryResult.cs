@@ -15,12 +15,20 @@ namespace Fresh.Query.Results;
 // NOTE: Public so SGs can interact with it
 public sealed class ComputedQueryResult<T> : IQueryResult<T>
 {
+    public delegate Task<T> RecomputeDelegate(IQuerySystemProxyView system, CancellationToken cancellationToken);
+
     public Revision ChangedAt { get; private set; } = Revision.Invalid;
     public Revision VerifiedAt { get; private set; } = Revision.Invalid;
 
     public IList<IQueryResult> Dependencies { get; } = new List<IQueryResult>();
 
+    private readonly RecomputeDelegate recompute;
     private T? cachedValue;
+
+    public ComputedQueryResult(RecomputeDelegate recompute)
+    {
+        this.recompute = recompute;
+    }
 
     public Task Refresh(IQuerySystemProxyView system, CancellationToken cancellationToken) =>
         this.GetValueAsync(system, cancellationToken);
@@ -30,7 +38,7 @@ public sealed class ComputedQueryResult<T> : IQueryResult<T>
         if (system.DisableMemoization)
         {
             // We disabled memoization, recompute
-            return await this.Recompute(system, cancellationToken);
+            return await this.recompute(system, cancellationToken);
         }
         else if (this.ChangedAt != Revision.Invalid)
         {
@@ -60,7 +68,7 @@ public sealed class ComputedQueryResult<T> : IQueryResult<T>
             cancellationToken.ThrowIfCancellationRequested();
 
             // Actually recompute
-            var newValue = await this.Recompute(system, cancellationToken);
+            var newValue = await this.recompute(system, cancellationToken);
 
             // To allow early-terminating some computations, we check if the new value is equivalent to the old one
             // This can happen for example when we insert whitespaces at the end of the line
@@ -92,7 +100,7 @@ public sealed class ComputedQueryResult<T> : IQueryResult<T>
             try
             {
                 // Now we do the recomputation
-                var newValue = await this.Recompute(system, cancellationToken);
+                var newValue = await this.recompute(system, cancellationToken);
                 // Cache the result
                 this.cachedValue = newValue;
             }
@@ -109,9 +117,6 @@ public sealed class ComputedQueryResult<T> : IQueryResult<T>
         this.ChangedAt = system.CurrentRevision;
         return this.GetValueCloned();
     }
-
-    private async Task<T> Recompute(IQuerySystemProxyView system, CancellationToken cancellationToken) =>
-        throw new NotImplementedException();
 
     private T GetValueCloned()
     {

@@ -167,6 +167,7 @@ using Fresh.Query.Results;
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 {prefix}
     partial interface {model.Symbol.Name} : IInputQueryGroup
     {{
@@ -207,6 +208,7 @@ using Fresh.Query.Results;
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 {prefix}
     partial interface {model.Symbol.Name} : IQueryGroup
     {{
@@ -294,7 +296,8 @@ void {groupModel.Symbol.Name}.Set{method.Name}({setterArgs}) =>
     {
         // Generate storage
         var storageName = ToStorageName(model.Symbol);
-        var storageType = GetStorageType(false, model.Keys, model.AwaitedType ?? model.ReturnType);
+        var storedType = model.AwaitedType ?? model.ReturnType;
+        var storageType = GetStorageType(false, model.Keys, storedType);
         // Generate getter keys
         var key = $"({string.Join(", ", model.Keys.Select(k => k.Name))})";
         if (model.Keys.Count == 0) key = "false";
@@ -302,10 +305,14 @@ void {groupModel.Symbol.Name}.Set{method.Name}({setterArgs}) =>
         var awaitSuffix = model.AwaitedType is null ? ".Result" : string.Empty;
         if (model.Symbol is IPropertySymbol prop)
         {
+            // Generate the adapter delegate
+            var adapter = model.AwaitedType is null
+                ? $"(system, ct) => Task.FromResult(this.implementation.{prop.Name})"
+                : $"(system, ct) => this.implementation.{prop.Name}";
             return $@"
 private readonly {storageType} {storageName} = new();
 {prop.Type.ToDisplayString()} {groupModel.Symbol.Name}.{prop.Name} =>
-    this.{storageName}.Get({key}, () => new()).GetValueAsync(this.querySystem, CancellationToken.None){awaitSuffix};
+    this.{storageName}.Get({key}, () => new({adapter})).GetValueAsync(this.querySystem, CancellationToken.None){awaitSuffix};
 ";
         }
         else
@@ -315,10 +322,17 @@ private readonly {storageType} {storageName} = new();
             if (model.HasCancellationToken) methodParams = methodParams.Append(("CancellationToken", "cancellationToken"));
             var args = string.Join(", ", methodParams.Select(p => $"{p.Type} {p.Name}"));
             var ctToPass = model.HasCancellationToken ? "cancellationToken" : "CancellationToken.None";
+            // Generate the adapter delegate
+            var adapterArgs = model.Keys.Select(p => p.Name);
+            if (model.HasCancellationToken) adapterArgs = adapterArgs.Append("ct");
+            var adapterInvocation = $"this.implementation.{method.Name}({string.Join(", ", adapterArgs)})";
+            var adapter = model.AwaitedType is null
+                ? $"(system, ct) => Task.FromResult({adapterInvocation})"
+                : $"(system, ct) => {adapterInvocation}";
             return $@"
 private readonly {storageType} {storageName} = new();
 {method.ReturnType.ToDisplayString()} {groupModel.Symbol.Name}.{method.Name}({args}) =>
-    this.{storageName}.Get({key}, () => new()).GetValueAsync(this.querySystem, {ctToPass}){awaitSuffix};
+    this.{storageName}.Get({key}, () => new({adapter})).GetValueAsync(this.querySystem, {ctToPass}){awaitSuffix};
 ";
         }
     }

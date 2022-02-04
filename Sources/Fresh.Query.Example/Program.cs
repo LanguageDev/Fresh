@@ -26,9 +26,17 @@ internal partial interface IComputation
 
 internal class MyComputation : IComputation
 {
-    public int CustomConstant => throw new NotImplementedException();
+    public int CustomConstant => this.inputs.Variable("y") * 3;
 
-    public Task<int> CustomComputation(string varName, int k, CancellationToken ct) => throw new NotImplementedException();
+    private readonly INumberInputs inputs;
+
+    public MyComputation(INumberInputs inputs)
+    {
+        this.inputs = inputs;
+    }
+
+    public Task<int> CustomComputation(string varName, int k, CancellationToken ct) =>
+        Task.FromResult(this.inputs.Variable(varName) + k);
 }
 
 internal class Program
