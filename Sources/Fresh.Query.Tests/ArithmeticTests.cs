@@ -5,14 +5,14 @@ using Microsoft.Extensions.Hosting;
 using Fresh.Query.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Fresh.Tests;
+namespace Fresh.Query.Tests;
 
 // a   b   c
 //  \ / \ /
 //   v1  v2
 //    \ /
 //     v3
-public partial class BasicArithmeticTests
+public sealed partial class ArithmeticTests
 {
     [InputQueryGroup]
     public partial interface INumberInputs
@@ -21,7 +21,7 @@ public partial class BasicArithmeticTests
     }
 
     [QueryGroup]
-    public partial interface IBasicArithmetic
+    public partial interface IArithmetic
     {
         public int V1 { get; }
         public int V2 { get; }
@@ -29,7 +29,7 @@ public partial class BasicArithmeticTests
         public int V4(string v1, int k2);
     }
 
-    public class MyBasicArithmetic : IBasicArithmetic
+    public sealed class MyArithmetic : IArithmetic
     {
         public int V1_invocations = 0;
         public int V2_invocations = 0;
@@ -54,9 +54,9 @@ public partial class BasicArithmeticTests
         }
 
         private readonly INumberInputs inputs;
-        private readonly IBasicArithmetic arithmetic;
+        private readonly IArithmetic arithmetic;
 
-        public MyBasicArithmetic(INumberInputs inputs, IBasicArithmetic arithmetic)
+        public MyArithmetic(INumberInputs inputs, IArithmetic arithmetic)
         {
             this.inputs = inputs;
             this.arithmetic = arithmetic;
@@ -80,8 +80,8 @@ public partial class BasicArithmeticTests
         var host = GetHost();
 
         var input = host.Services.GetRequiredService<INumberInputs>();
-        var arithProxy = host.Services.GetRequiredService<IBasicArithmetic>();
-        var arith = host.Services.GetRequiredService<MyBasicArithmetic>();
+        var arithProxy = host.Services.GetRequiredService<IArithmetic>();
+        var arith = host.Services.GetRequiredService<MyArithmetic>();
 
         input.SetVariable("a", 1);
         input.SetVariable("b", 2);
@@ -102,8 +102,8 @@ public partial class BasicArithmeticTests
         var host = GetHost();
 
         var input = host.Services.GetRequiredService<INumberInputs>();
-        var arithProxy = host.Services.GetRequiredService<IBasicArithmetic>();
-        var arith = host.Services.GetRequiredService<MyBasicArithmetic>();
+        var arithProxy = host.Services.GetRequiredService<IArithmetic>();
+        var arith = host.Services.GetRequiredService<MyArithmetic>();
 
         input.SetVariable("a", 1);
         input.SetVariable("b", 2);
@@ -132,8 +132,8 @@ public partial class BasicArithmeticTests
         var host = GetHost();
 
         var input = host.Services.GetRequiredService<INumberInputs>();
-        var arithProxy = host.Services.GetRequiredService<IBasicArithmetic>();
-        var arith = host.Services.GetRequiredService<MyBasicArithmetic>();
+        var arithProxy = host.Services.GetRequiredService<IArithmetic>();
+        var arith = host.Services.GetRequiredService<MyArithmetic>();
 
         input.SetVariable("a", 1);
         input.SetVariable("b", 2);
@@ -162,8 +162,8 @@ public partial class BasicArithmeticTests
         var host = GetHost();
 
         var input = host.Services.GetRequiredService<INumberInputs>();
-        var arithProxy = host.Services.GetRequiredService<IBasicArithmetic>();
-        var arith = host.Services.GetRequiredService<MyBasicArithmetic>();
+        var arithProxy = host.Services.GetRequiredService<IArithmetic>();
+        var arith = host.Services.GetRequiredService<MyArithmetic>();
 
         input.SetVariable("a", 1);
         input.SetVariable("b", 2);
@@ -185,8 +185,8 @@ public partial class BasicArithmeticTests
         var host = GetHost();
 
         var input = host.Services.GetRequiredService<INumberInputs>();
-        var arithProxy = host.Services.GetRequiredService<IBasicArithmetic>();
-        var arith = host.Services.GetRequiredService<MyBasicArithmetic>();
+        var arithProxy = host.Services.GetRequiredService<IArithmetic>();
+        var arith = host.Services.GetRequiredService<MyArithmetic>();
 
         input.SetVariable("a", 1);
         input.SetVariable("b", 2);
@@ -211,6 +211,6 @@ public partial class BasicArithmeticTests
         .CreateDefaultBuilder()
         .ConfigureQuerySystem(system => system
             .AddInputQueryGroup<INumberInputs>()
-            .AddQueryGroup<IBasicArithmetic, MyBasicArithmetic>())
+            .AddQueryGroup<IArithmetic, MyArithmetic>())
         .Build();
 }

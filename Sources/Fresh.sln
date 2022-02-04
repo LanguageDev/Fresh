@@ -14,7 +14,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Fresh.Query.Example", "Fres
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Fresh.Query", "Fresh.Query\Fresh.Query.csproj", "{889A0119-4AD1-4241-875F-BAD49B31F8B7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fresh.Tests", "Fresh.Tests\Fresh.Tests.csproj", "{B82C8E60-050F-4887-94D6-532384E862CE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fresh.Query.Tests", "Fresh.Query.Tests\Fresh.Query.Tests.csproj", "{B82C8E60-050F-4887-94D6-532384E862CE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
