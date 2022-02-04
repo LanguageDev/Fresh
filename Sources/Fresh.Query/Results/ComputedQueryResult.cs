@@ -13,7 +13,7 @@ using Fresh.Query.Internal;
 namespace Fresh.Query.Results;
 
 // NOTE: Public so SGs can interact with it
-public class ComputedQueryResult<T> : IQueryResult<T>
+public sealed class ComputedQueryResult<T> : IQueryResult<T>
 {
     public Revision ChangedAt { get; private set; } = Revision.Invalid;
     public Revision VerifiedAt { get; private set; } = Revision.Invalid;
@@ -21,17 +21,6 @@ public class ComputedQueryResult<T> : IQueryResult<T>
     public IList<IQueryResult> Dependencies { get; } = new List<IQueryResult>();
 
     private T? cachedValue;
-
-    public void Clear(Revision before)
-    {
-        if (this.VerifiedAt <= before)
-        {
-            this.cachedValue = default;
-            this.ChangedAt = Revision.Invalid;
-            this.VerifiedAt = Revision.Invalid;
-            this.Dependencies.Clear();
-        }
-    }
 
     public Task Refresh(IQuerySystemProxyView system, CancellationToken cancellationToken) =>
         this.GetValueAsync(system, cancellationToken);

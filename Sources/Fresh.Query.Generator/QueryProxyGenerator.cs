@@ -164,6 +164,7 @@ public sealed class QueryProxyGenerator : IIncrementalGenerator
 using System;
 using Fresh.Query;
 using Fresh.Query.Internal;
+using Fresh.Query.Results;
 using System.Collections.Generic;
 {prefix}
     partial interface {model.Symbol.Name} : IInputQueryGroup
@@ -180,8 +181,10 @@ using System.Collections.Generic;
                 this.querySystem.RegisterProxy(this);
             }}
 
-            void IQueryGroupProxy.Clear(Revision revision) =>
-                throw new NotImplementedException();
+            void IQueryGroupProxy.Clear(Revision revision)
+            {{
+                {string.Join("\n", model.InputQueries.Select(q => $"this.{ToStorageName(q.Symbol)}.Clear(revision);"))}
+            }}
 
             {string.Join("\n", model.InputQueries.Select(q => ToProxySource(model, q)))}
         }}
@@ -200,6 +203,7 @@ using System.Collections.Generic;
 using System;
 using Fresh.Query;
 using Fresh.Query.Internal;
+using Fresh.Query.Results;
 using System.Collections.Generic;
 {prefix}
     partial interface {model.Symbol.Name} : IQueryGroup
@@ -216,8 +220,10 @@ using System.Collections.Generic;
                 this.querySystem.RegisterProxy(this);
             }}
 
-            void IQueryGroupProxy.Clear(Revision revision) =>
-                throw new NotImplementedException();
+            void IQueryGroupProxy.Clear(Revision revision)
+            {{
+                {string.Join("\n", model.Queries.Select(q => $"this.{ToStorageName(q.Symbol)}.Clear(revision);"))}
+            }}
 
             {string.Join("\n", model.Queries.Select(q => ToProxySource(model, q)))}
         }}
@@ -246,13 +252,21 @@ using System.Collections.Generic;
 
     private static string ToProxySource(InputQueryGroupModel groupModel, InputQueryModel model)
     {
+        // Generate storage
+        var storageName = ToStorageName(model.Symbol);
+        var storageType = GetStorageType(true, model.Keys, model.StoredType);
+        // Generate getter and setter
+        var key = $"({string.Join(", ", model.Keys.Select(k => k.Name))})";
+        if (model.Keys.Count == 0) key = "false";
+        // Generate invoking syntax
         if (model.Symbol is IPropertySymbol prop)
         {
             return $@"
+private readonly {storageType} {storageName} = new();
 {prop.Type.ToDisplayString()} {groupModel.Symbol.Name}.{prop.Name}
 {{
-    get => throw new NotImplementedException();
-    set => throw new NotImplementedException();
+    get => this.{storageName}.Get({key}, () => new()).GetValue(this.querySystem);
+    set => this.{storageName}.Get({key}, () => new()).SetValue(this.querySystem, value);
 }}
 ";
         }
@@ -265,20 +279,24 @@ using System.Collections.Generic;
             if (model.Keys.Any(p => p.Name == valueName)) valueName = $"value{model.Keys.Count}";
             var setterArgs = args.Length == 0 ? valueName : $"{args}, {model.StoredType.ToDisplayString()} {valueName}";
             return $@"
+private readonly {storageType} {storageName} = new();
 {model.StoredType.ToDisplayString()} {groupModel.Symbol.Name}.{method.Name}({args}) =>
-    throw new NotImplementedException();
-
+    this.{storageName}.Get({key}, () => new()).GetValue(this.querySystem);
 void {groupModel.Symbol.Name}.Set{method.Name}({setterArgs}) =>
-    throw new NotImplementedException();
+    this.{storageName}.Get({key}, () => new()).SetValue(this.querySystem, {valueName});
 ";
         }
     }
 
     private static string ToProxySource(QueryGroupModel groupModel, QueryModel model)
     {
+        // Generate storage
+        var storageName = ToStorageName(model.Symbol);
+        var storageType = GetStorageType(false, model.Keys, model.AwaitedType ?? model.ReturnType);
         if (model.Symbol is IPropertySymbol prop)
         {
             return $@"
+private readonly {storageType} {storageName} = new();
 {prop.Type.ToDisplayString()} {groupModel.Symbol.Name}.{prop.Name} =>
     throw new NotImplementedException();
 ";
@@ -288,11 +306,28 @@ void {groupModel.Symbol.Name}.Set{method.Name}({setterArgs}) =>
             var method = (IMethodSymbol)model.Symbol;
             var args = string.Join(", ", model.Keys.Select(param => $"{param.Type.ToDisplayString()} {param.Name}"));
             return $@"
+private readonly {storageType} {storageName} = new();
 {method.ReturnType.ToDisplayString()} {groupModel.Symbol.Name}.{method.Name}({args}) =>
     throw new NotImplementedException();
 ";
         }
     }
+
+    private static string GetStorageType(bool input, IReadOnlyList<IParameterSymbol> keys, ITypeSymbol storedType)
+    {
+        var keyType = keys.Count switch
+        {
+            0 => "bool",
+            1 => keys[0].ToDisplayString(),
+            _ => $"({string.Join(", ", keys.Select(k => k.Type.ToDisplayString()))})",
+        };
+        var stored = input
+            ? $"InputQueryResult<{storedType.ToDisplayString()}>"
+            : $"ComputedQueryResult<{storedType.ToDisplayString()}>";
+        return $"QueryCache<{keyType}, {stored}>";
+    }
+
+    private static string ToStorageName(ISymbol symbol) => $"__{symbol.Name}_storage";
 
     private static TypeEnclosure GetTypeEnclosure(INamedTypeSymbol symbol)
     {

@@ -21,7 +21,6 @@ public interface IQueryResult
     public IList<IQueryResult> Dependencies { get; }
 
     public Task Refresh(IQuerySystemProxyView system, CancellationToken cancellationToken);
-    public void Clear(Revision revision);
 }
 
 public interface IQueryResult<T> : IQueryResult

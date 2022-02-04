@@ -13,7 +13,7 @@ using Fresh.Query.Internal;
 namespace Fresh.Query.Results;
 
 // NOTE: Public so SGs can interact with it
-public class InputQueryResult<T> : IQueryResult<T>
+public sealed class InputQueryResult<T> : IQueryResult<T>
 {
     public Revision ChangedAt { get; private set; } = Revision.Invalid;
 
@@ -23,23 +23,17 @@ public class InputQueryResult<T> : IQueryResult<T>
 
     private T? value;
 
-    public void Clear(Revision revision)
-    {
-        if (this.ChangedAt <= revision)
-        {
-            this.value = default;
-            this.ChangedAt = Revision.Invalid;
-        }
-    }
-
     public Task Refresh(IQuerySystemProxyView system, CancellationToken cancellationToken) =>
         this.GetValueAsync(system, cancellationToken);
 
-    public Task<T> GetValueAsync(IQuerySystemProxyView system, CancellationToken cancellationToken)
+    public Task<T> GetValueAsync(IQuerySystemProxyView system, CancellationToken cancellationToken) =>
+        Task.FromResult(this.GetValue(system));
+
+    public T GetValue(IQuerySystemProxyView system)
     {
         system.RegisterDependency(this);
         if (this.ChangedAt == Revision.Invalid) throw new InvalidOperationException($"Tried to retrieve input value before it was ever set");
-        return Task.FromResult(this.value!);
+        return this.value!;
     }
 
     public void SetValue(IQuerySystemProxyView system, T value)
