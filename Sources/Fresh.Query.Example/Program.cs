@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Fresh.Query.Example;
@@ -20,14 +21,14 @@ internal partial interface INumberInputs
 internal partial interface IComputation
 {
     public int CustomConstant { get; }
-    public int CustomComputation(string varName, int k);
+    public Task<int> CustomComputation(string varName, int k, CancellationToken ct);
 }
 
 internal class MyComputation : IComputation
 {
     public int CustomConstant => throw new NotImplementedException();
 
-    public int CustomComputation(string varName, int k) => throw new NotImplementedException();
+    public Task<int> CustomComputation(string varName, int k, CancellationToken ct) => throw new NotImplementedException();
 }
 
 internal class Program
@@ -38,7 +39,7 @@ internal class Program
         var val = host.Services.GetRequiredService<INumberInputs>();
         var comp = host.Services.GetRequiredService<IComputation>();
         val.SetVariable("x", 3);
-        var a = comp.CustomComputation("x", 4);
+        var a = comp.CustomComputation("x", 4, CancellationToken.None);
     }
 
     public static IHostBuilder CreateHostBuilder(string[] args) => Host

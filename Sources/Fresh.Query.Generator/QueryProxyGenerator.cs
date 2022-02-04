@@ -130,10 +130,10 @@ public sealed class QueryProxyGenerator : IIncrementalGenerator
                 keys = method.Parameters;
                 returnType = method.ReturnType;
                 // Determine, if has CT
-                if (keys.Count > 0 && keys[keys.Count - 1].Name == typeof(CancellationToken).FullName)
+                if (keys.Count > 0 && keys[keys.Count - 1].ToDisplayString() == typeof(CancellationToken).FullName)
                 {
                     // Last parameter is a CT
-                    ((List<ITypeSymbol>)keys).RemoveAt(keys.Count - 1);
+                    keys = method.Parameters.RemoveAt(method.Parameters.Length - 1);
                     hasCt = true;
                 }
             }
@@ -161,11 +161,12 @@ public sealed class QueryProxyGenerator : IIncrementalGenerator
         var (prefix, suffix) = GetTypeEnclosure(model.Symbol);
 
         var source = $@"
-using System;
 using Fresh.Query;
 using Fresh.Query.Internal;
 using Fresh.Query.Results;
+using System;
 using System.Collections.Generic;
+using System.Threading;
 {prefix}
     partial interface {model.Symbol.Name} : IInputQueryGroup
     {{
@@ -200,11 +201,12 @@ using System.Collections.Generic;
         var (prefix, suffix) = GetTypeEnclosure(model.Symbol);
 
         var source = $@"
-using System;
 using Fresh.Query;
 using Fresh.Query.Internal;
 using Fresh.Query.Results;
+using System;
 using System.Collections.Generic;
+using System.Threading;
 {prefix}
     partial interface {model.Symbol.Name} : IQueryGroup
     {{
@@ -304,7 +306,9 @@ private readonly {storageType} {storageName} = new();
         else
         {
             var method = (IMethodSymbol)model.Symbol;
-            var args = string.Join(", ", model.Keys.Select(param => $"{param.Type.ToDisplayString()} {param.Name}"));
+            var methodParams = model.Keys.Select(p => $"{p.Type.ToDisplayString()} {p.Name}");
+            if (model.HasCancellationToken) methodParams = methodParams.Append("CancellationToken cancellationToken");
+            var args = string.Join(", ", methodParams);
             return $@"
 private readonly {storageType} {storageName} = new();
 {method.ReturnType.ToDisplayString()} {groupModel.Symbol.Name}.{method.Name}({args}) =>
