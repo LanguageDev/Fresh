@@ -295,7 +295,8 @@ private readonly {storageType} {storageName} = new();
             var args = string.Join(", ", model.Keys.Select(param => $"{param.Type.ToDisplayString()} {param.Name}"));
             var valueName = "value";
             if (model.Keys.Any(p => p.Name == valueName)) valueName = $"value{model.Keys.Count}";
-            var setterArgs = args.Length == 0 ? valueName : $"{args}, {model.StoredType.ToDisplayString()} {valueName}";
+            var lastArg = $"{model.StoredType.ToDisplayString()} {valueName}";
+            var setterArgs = args.Length == 0 ? lastArg : $"{args}, {lastArg}";
             return $@"
 private readonly {storageType} {storageName} = new();
 {model.StoredType.ToDisplayString()} {groupModel.Symbol.Name}.{method.Name}({args}) =>
