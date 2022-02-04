@@ -144,7 +144,7 @@ public sealed partial class IncrementalTests
         // Clear to cause recomputation
         host.Services.GetRequiredService<IQuerySystem>().Clear();
 
-        // Next recomputation should also
+        // Next recomputation should also recompute everything
         var _3 = queryProxy.CalculatedValue;
         var _4 = queryProxy.CalculateFoo("abc", 4);
         Assert.Equal(2, query.CalculatedValue_invocations);

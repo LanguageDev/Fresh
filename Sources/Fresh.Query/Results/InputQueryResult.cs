@@ -17,7 +17,8 @@ public sealed class InputQueryResult<T> : IQueryResult<T>
 {
     public Revision ChangedAt { get; private set; } = Revision.Invalid;
 
-    public Revision VerifiedAt => this.ChangedAt;
+    // Inputs are set from the outside, they always count as valid
+    public Revision VerifiedAt => Revision.MaxValue;
 
     public IList<IQueryResult> Dependencies => Array.Empty<IQueryResult>();
 

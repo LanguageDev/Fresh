@@ -185,7 +185,6 @@ using System.Threading.Tasks;
 
             void IQueryGroupProxy.Clear(Revision revision)
             {{
-                // {string.Join("\n", model.InputQueries.Select(q => $"this.{ToStorageName(q.Symbol)}.Clear(revision);"))}
             }}
 
             {string.Join("\n", model.InputQueries.Select(q => ToProxySource(model, q)))}
@@ -194,7 +193,8 @@ using System.Threading.Tasks;
 {suffix}
 ";
 
-        return (model.Symbol.Name, source);
+        var name = GetHintName(model.Symbol);
+        return (name, source);
     }
 
     private static (string Name, string Text) ToSource(QueryGroupModel model)
@@ -248,7 +248,9 @@ using System.Threading.Tasks;
     }}
 {suffix}
 ";
-        return (model.Symbol.Name, source);
+
+        var name = GetHintName(model.Symbol);
+        return (name, source);
     }
 
     private static string ToSetterSource(InputQueryModel model)
@@ -367,6 +369,14 @@ private readonly {storageType} {storageName} = new();
     }
 
     private static string ToStorageName(ISymbol symbol) => $"__{symbol.Name}_storage";
+
+    private static string GetHintName(INamedTypeSymbol symbol)
+    {
+        var nameChain = GetContainingTypeChain(symbol).Select(s => s.Name);
+        if (symbol.ContainingNamespace is not null) nameChain = nameChain.Prepend(symbol.ContainingNamespace.Name);
+        nameChain = nameChain.Append(symbol.Name).Append("Generated");
+        return string.Join(".", nameChain);
+    }
 
     private static TypeEnclosure GetTypeEnclosure(INamedTypeSymbol symbol)
     {
@@ -497,7 +507,7 @@ private readonly {storageType} {storageName} = new();
                     .NormalizeWhitespace()
                     .GetText()
                     .ToString();
-                context.AddSource($"{name}.Generated", SourceText.From(formattedText, Encoding.UTF8));
+                context.AddSource(name, SourceText.From(formattedText, Encoding.UTF8));
             }
         };
 
