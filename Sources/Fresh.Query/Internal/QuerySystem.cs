@@ -31,7 +31,7 @@ internal sealed class QuerySystem : IQuerySystem, IQuerySystemProxyView
 
     public Revision IncrementRevision()
     {
-        this.CurrentRevision = new(this.CurrentRevision.Number);
+        this.CurrentRevision = new(this.CurrentRevision.Number + 1);
         return this.CurrentRevision;
     }
 

@@ -45,11 +45,8 @@ internal sealed class QuerySystemConfigurator : IQuerySystemConfigurator
             // We register the implementation type exactly as is
             .AddSingleton<TImpl>()
             // The proxy gets registered through the interface
-            .AddSingleton(provider => (TInterface?)Activator.CreateInstance(
-                tProxy,
-                this.querySystem,
-                provider.GetRequiredService<TImpl>())
-             ?? throw new InvalidOperationException($"The query group proxy for {tInterface.Name} could not be instantiated")));
+            .AddSingleton(provider => (TInterface?)Activator.CreateInstance(tProxy, provider, tImpl)
+                                   ?? throw new InvalidOperationException("Could not instantiate generated proxy")));
         return this;
     }
 

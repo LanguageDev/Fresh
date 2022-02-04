@@ -205,6 +205,7 @@ using System.Threading.Tasks;
 using Fresh.Query;
 using Fresh.Query.Internal;
 using Fresh.Query.Results;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -215,12 +216,25 @@ using System.Threading.Tasks;
         public sealed class Proxy : {model.Symbol.Name}, IQueryGroupProxy
         {{
             private readonly IQuerySystemProxyView querySystem;
-            private readonly {model.Symbol.Name} implementation;
+            private readonly IServiceProvider serviceProvider;
+            private readonly Type implementationType;
 
-            public Proxy(IQuerySystem querySystem, {model.Symbol.Name} implementation)
+            private {model.Symbol.Name} implementation;
+
+            public {model.Symbol.Name} Implementation
             {{
-                this.querySystem = (IQuerySystemProxyView)querySystem;
-                this.implementation = implementation;
+                get
+                {{
+                    this.implementation ??= ({model.Symbol.Name})this.serviceProvider.GetRequiredService(this.implementationType);
+                    return this.implementation;
+                }}
+            }}
+
+            public Proxy(IServiceProvider serviceProvider, Type implementationType)
+            {{
+                this.querySystem = (IQuerySystemProxyView)serviceProvider.GetRequiredService<IQuerySystem>();
+                this.serviceProvider = serviceProvider;
+                this.implementationType = implementationType;
                 this.querySystem.RegisterProxy(this);
             }}
 
@@ -307,8 +321,8 @@ void {groupModel.Symbol.Name}.Set{method.Name}({setterArgs}) =>
         {
             // Generate the adapter delegate
             var adapter = model.AwaitedType is null
-                ? $"(system, ct) => Task.FromResult(this.implementation.{prop.Name})"
-                : $"(system, ct) => this.implementation.{prop.Name}";
+                ? $"(system, ct) => Task.FromResult(this.Implementation.{prop.Name})"
+                : $"(system, ct) => this.Implementation.{prop.Name}";
             return $@"
 private readonly {storageType} {storageName} = new();
 {prop.Type.ToDisplayString()} {groupModel.Symbol.Name}.{prop.Name} =>
@@ -325,7 +339,7 @@ private readonly {storageType} {storageName} = new();
             // Generate the adapter delegate
             var adapterArgs = model.Keys.Select(p => p.Name);
             if (model.HasCancellationToken) adapterArgs = adapterArgs.Append("ct");
-            var adapterInvocation = $"this.implementation.{method.Name}({string.Join(", ", adapterArgs)})";
+            var adapterInvocation = $"this.Implementation.{method.Name}({string.Join(", ", adapterArgs)})";
             var adapter = model.AwaitedType is null
                 ? $"(system, ct) => Task.FromResult({adapterInvocation})"
                 : $"(system, ct) => {adapterInvocation}";
