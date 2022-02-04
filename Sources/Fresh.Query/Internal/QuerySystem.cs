@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Fresh.Query.Hosting;
+using Fresh.Query.Results;
 
 namespace Fresh.Query.Internal;
 
@@ -18,6 +19,8 @@ internal sealed class QuerySystem : IQuerySystem, IQuerySystemProxyView
     public Revision CurrentRevision { get; private set; } = new(0);
 
     private readonly List<IQueryGroupProxy> proxies = new();
+    // Runtime "call-stack" for computed values
+    private readonly Stack<IQueryResult> valueStack = new();
 
     public void Clear(Revision revision)
     {
@@ -31,4 +34,22 @@ internal sealed class QuerySystem : IQuerySystem, IQuerySystemProxyView
         this.CurrentRevision = new(this.CurrentRevision.Number);
         return this.CurrentRevision;
     }
+
+    public void DetectCycle(IQueryResult value)
+    {
+        if (this.valueStack.Contains(value)) throw new InvalidOperationException("Cycle detected!");
+    }
+
+    public void RegisterDependency(IQueryResult value)
+    {
+        if (this.valueStack.TryPeek(out var top) && !top.Dependencies.Contains(value)) top.Dependencies.Add(value);
+    }
+
+    public void PushDependency(IQueryResult value)
+    {
+        this.RegisterDependency(value);
+        this.valueStack.Push(value);
+    }
+
+    public void PopDependency() => this.valueStack.Pop();
 }

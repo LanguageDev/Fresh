@@ -172,12 +172,12 @@ using System.Collections.Generic;
 
         public sealed class Proxy : {model.Symbol.Name}, IQueryGroupProxy
         {{
-            private readonly IQuerySystem querySystem;
+            private readonly IQuerySystemProxyView querySystem;
 
             public Proxy(IQuerySystem querySystem)
             {{
-                this.querySystem = querySystem;
-                ((IQuerySystemProxyView)this.querySystem).RegisterProxy(this);
+                this.querySystem = (IQuerySystemProxyView)querySystem;
+                this.querySystem.RegisterProxy(this);
             }}
 
             void IQueryGroupProxy.Clear(Revision revision) =>
@@ -206,14 +206,14 @@ using System.Collections.Generic;
     {{
         public sealed class Proxy : {model.Symbol.Name}, IQueryGroupProxy
         {{
-            private readonly IQuerySystem querySystem;
+            private readonly IQuerySystemProxyView querySystem;
             private readonly {model.Symbol.Name} implementation;
 
             public Proxy(IQuerySystem querySystem, {model.Symbol.Name} implementation)
             {{
-                this.querySystem = querySystem;
+                this.querySystem = (IQuerySystemProxyView)querySystem;
                 this.implementation = implementation;
-                ((IQuerySystemProxyView)this.querySystem).RegisterProxy(this);
+                this.querySystem.RegisterProxy(this);
             }}
 
             void IQueryGroupProxy.Clear(Revision revision) =>
