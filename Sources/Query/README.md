@@ -317,9 +317,131 @@ Do ✔️:
  * Have all member fields as `readonly`
  * Only call out to other side-effect free methods
 
-TODO:
- * don't call another query with this., use the injected proxy
- * don't conditionally call another query
- * computations have to be pure (side-effect free)
- * the parameters have to be hashable and equatable, the return type has to be equatable
- * the return type has to be either immutable or clonable
+### Make sure that query parameters are hashable and equatable and the return type is at least equatable
+
+Since the equality of computations is based on the equality of the parameters and return types, there are some constraints they have to follow. Namely, all parameters should be hashable and equatable _by value_ and the return type has to be at least equatable _by value_.
+
+Don't ❌:
+```cs
+class MyParam
+{
+    public int X { get; set; }
+    public int Y { get; set; }
+}
+
+class MyResult
+{
+    public string X { get; init; }
+    public string Y { get; init; }
+}
+
+class MyService : IService
+{
+    // ...
+
+    // Oops, MyParam doesn't override Equals and GetHashCode!
+    // Oops, MyResult doesn't override Equals!
+    public MyResult Computation(MyParam x) => /* ... */;
+}
+```
+
+Do ✔️:
+```cs
+class MyParam
+{
+    public int X { get; set; }
+    public int Y { get; set; }
+
+    public override bool Equals(object other) =>
+           other is MyParam p
+        && this.X == p.X
+        && this.Y == p.Y;
+
+    public override int GetHashCode() => HashCode.Combine(this.X, this.Y);
+}
+
+class MyResult
+{
+    public string X { get; init; }
+    public string Y { get; init; }
+
+    public override bool Equals(object other) =>
+           other is MyResult p
+        && this.X == p.X
+        && this.Y == p.Y;
+
+    public override int GetHashCode() => HashCode.Combine(this.X, this.Y);
+}
+
+class MyService : IService
+{
+    // ...
+
+    // Ok!
+    public MyResult Computation(MyParam x) => /* ... */;
+}
+```
+
+Note, that it would be way better to implement `IEquatable<T>` for both types, or even use `record`s!
+
+### The return type has to be either immutable or clonable
+
+The returned value will be returned to a user that will probably do _something_ with the value. If the system returns the original value and the user decides to mutate it, it will modify the stored instance as well! Make sure to either make your returned values immutable, or have them implement `ICloneable`.
+
+Don't ❌:
+```cs
+class MyResult
+{
+    public string X { get; set; }
+    public string Y { get; set; }
+}
+
+class MyService : IService
+{
+    // ...
+
+    // Oops, MyResult is mutable!
+    // If the caller decides to modify it, the value will be ruined!
+    public MyResult Computation(MyParam x) => /* ... */;
+}
+```
+
+Do ✔️:
+```cs
+class MyResult
+{
+    public string X { get; init; }
+    public string Y { get; init; }
+}
+
+class MyService : IService
+{
+    // ...
+
+    // Ok, MyResult is immutable.
+    public MyResult Computation(MyParam x) => /* ... */;
+}
+```
+
+Do ✔️:
+```cs
+class MyResult : ICloneable
+{
+    public string X { get; set; }
+    public string Y { get; set; }
+
+    public object Clone() => new MyResult
+    {
+        X = this.X,
+        Y = this.Y,
+    };
+}
+
+class MyService : IService
+{
+    // ...
+
+    // Ok, MyResult implements ICloneable, it will be cloned on return.
+    public MyResult Computation(MyParam x) => /* ... */;
+}
+```
