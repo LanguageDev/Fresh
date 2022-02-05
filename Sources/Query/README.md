@@ -172,9 +172,150 @@ internal class Program
 
 ## Asynchronous computation
 
-TODO
+The framework supports asynchronous computations for non-input queries with:
+ * Accepting awaitable computation results (like `Task<T>`)
+ * Accepting a `CancellationToken` as the _last_ parameter
+
+Here are all the possible variations in a short query group declaration:
+```cs
+[QueryGroup]
+public partial interface IExampleService
+{
+    // Nothing, like previously
+    public int ComputeX(string name, int x);
+
+    // Returning an awaitable Task
+    public Task<int> ComputeY(string name, int x);
+
+    // Accepting a cancellation token
+    public int ComputeZ(string name, int x, CancellationToken ct);
+
+    //  Returning an awaitable Task and accepting a cancellation token
+    public Task<int> ComputeW(string name, int x, CancellationToken ct);
+}
+```
+
+When writing the queries in the compiler, make sure to write almost everything asynchronous and make it accept a cancellation token, if it's a long running query or potentially calls into a long running query. The framework will check on the passed in cancellation token in between computations, but it won't do while your query is doing some heavy work! Make sure to check on the cancellation token when plausible.
 
 ## Things to watch out for
+
+### Don't refer to other queries in the same group through the same instance
+
+As this has been mentioned before, don't call another query in the same group through `this`, as it will not go through memoization! Inject the proxy through DI and make the call through that.
+
+Don't ❌:
+```cs
+class MyService : IService
+{
+    // ...
+
+    public int Computation1(string x) => /* ... */;
+
+    public int Computation2(string x)
+    {
+        // Oops, not going through the memoizing proxy!
+        var c1 = this.Computation1(x);
+        // ...
+    }
+}
+```
+
+Do ✔️:
+```cs
+class MyService : IService
+{
+    private readonly IService service;
+
+    public MyService(IService service) => this.service = service;
+
+    public int Computation1(string x) => /* ... */;
+
+    public int Computation2(string x)
+    {
+        // Ok!
+        var c1 = this.service.Computation1(x);
+        // ...
+    }
+}
+```
+
+### Don't conditionally call a query where the condition can change between computations
+
+The dependency tracking happens in the system on the computation for each value. If a value does not get a dependency registered, it won't be considered as a dependency for that computed value. The general advice is to unconditionally call all your queries, unless you are 100% sure the condition will never change.
+
+Note, that conditioning based on the parameters is perfectly fine!
+
+Don't ❌:
+```cs
+class MyService : IService
+{
+    private readonly IOtherService other;
+
+    public int Computation(string x)
+    {
+        if (/* outside condition */)
+        {
+            // Oops, c1 might not become a dependency!
+            var c1 = this.other.ToThing(x);
+            // ...
+        }
+        // ...
+    }
+}
+```
+
+Do ✔️:
+```cs
+class MyService : IService
+{
+    private readonly IOtherService other;
+
+    public int Computation(string x)
+    {
+        // Ok, always calling the query, ensured to be a dependency
+        var c1 = this.other.ToThing(x);
+        if (/* outside condition */)
+        {
+            // ...
+        }
+        // ...
+    }
+}
+```
+
+Do ✔️:
+```cs
+class MyService : IService
+{
+    private readonly IOtherService other;
+
+    public int Computation(string x)
+    {
+        // Depending on a parameter is ok!
+        if (x.StartsWith(/* ... */))
+        {
+            // Ok, if the parameter changes, that will be a separately tracked entity anyway!
+            var c1 = this.other.ToThing(x);
+            // ...
+        }
+        // ...
+    }
+}
+```
+
+### Make sure all computations are side-effect free
+
+Memoization is only correct, if the computation is side-effect free. Otherwise, side-effects might not repeat when recalling a memoized value.
+
+Don't ❌:
+ * Read files in a query
+ * Write to the console in a query (unless testing)
+ * Modify member fields in a query group implementation
+
+Do ✔️:
+ * Utilize immutable constructs
+ * Have all member fields as `readonly`
+ * Only call out to other side-effect free methods
 
 TODO:
  * don't call another query with this., use the injected proxy
