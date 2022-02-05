@@ -1,6 +1,6 @@
 # Querying module
 
-This is a short documentation about the motivation, usage and inner workings of the querying module.
+This is a short documentation about the motivation, usage and inner workings of the querying module. For a quick example you can take a look at the [sample program](./Fresh.Query.Example).
 
 ## Traditional vs Modern compilers
 
