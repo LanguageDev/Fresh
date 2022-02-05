@@ -10,29 +10,47 @@ namespace Fresh.Query.Example;
 [InputQueryGroup]
 internal partial interface INumberInputs
 {
-    public int Variable(string name);
+    public int Steps { get; set; }
 }
 
 [QueryGroup]
-internal partial interface IComputation
+internal partial interface IMathService
 {
-    public int CustomConstant { get; }
-    public Task<int> CustomComputation(string varName, int k, CancellationToken ct);
+    public int Fibonacci(int n);
+    public int Factorial(int n);
 }
 
-internal class MyComputation : IComputation
+internal class MathService : IMathService
 {
-    public int CustomConstant => this.inputs.Variable("y") * 3;
-
     private readonly INumberInputs inputs;
+    private readonly IMathService mathService;
 
-    public MyComputation(INumberInputs inputs)
+    public MathService(INumberInputs inputs, IMathService mathService)
     {
         this.inputs = inputs;
+        this.mathService = mathService;
     }
 
-    public Task<int> CustomComputation(string varName, int k, CancellationToken ct) =>
-        Task.FromResult(this.inputs.Variable(varName) + k);
+    public int Fibonacci(int n)
+    {
+        Console.WriteLine($"Computing Fibonacci({n})");
+        return n switch
+        {
+            < 2 => 1,
+            _ => this.mathService.Fibonacci(n - 1) + this.mathService.Fibonacci(n - 2),
+        };
+    }
+
+    public int Factorial(int n)
+    {
+        var order = this.inputs.Steps;
+        Console.WriteLine($"Computing Factorial({n}) of order {order}");
+        return n switch
+        {
+            <= 1 => 1,
+            _ => n * this.mathService.Factorial(n - order),
+        };
+    }
 }
 
 internal class Program
@@ -40,16 +58,27 @@ internal class Program
     public static void Main(string[] args)
     {
         var host = CreateHostBuilder(args).Build();
-        var val = host.Services.GetRequiredService<INumberInputs>();
-        var comp = host.Services.GetRequiredService<IComputation>();
-        val.SetVariable("x", 3);
-        var a = comp.CustomComputation("x", 4, CancellationToken.None);
-        Console.WriteLine($"a = {a}");
+        var numbers = host.Services.GetRequiredService<INumberInputs>();
+        var math = host.Services.GetRequiredService<IMathService>();
+
+        Console.WriteLine($"Fibonacci(5) = {math.Fibonacci(5)}");
+        Console.WriteLine($"Fibonacci(10) = {math.Fibonacci(10)}");
+
+        Console.WriteLine("Factorials of order 1");
+        numbers.Steps = 1;
+        Console.WriteLine($"Factorial(4) = {math.Factorial(4)}");
+        Console.WriteLine($"Factorial(6) = {math.Factorial(6)}");
+        Console.WriteLine("Factorials of order 2");
+        Console.WriteLine("Don't get weirder out by the random non-order 2 computations!");
+        Console.WriteLine("That is just the old results getting invalidated, because the dependent value 'Steps' changed!");
+        numbers.Steps = 2;
+        Console.WriteLine($"Factorial(4) = {math.Factorial(4)}");
+        Console.WriteLine($"Factorial(6) = {math.Factorial(6)}");
     }
 
     public static IHostBuilder CreateHostBuilder(string[] args) => Host
         .CreateDefaultBuilder(args)
         .ConfigureQuerySystem(system => system
             .AddInputQueryGroup<INumberInputs>()
-            .AddQueryGroup<IComputation, MyComputation>());
+            .AddQueryGroup<IMathService, MathService>());
 }
