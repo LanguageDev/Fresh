@@ -81,7 +81,7 @@ public sealed class QueryProxyGenerator : IIncrementalGenerator
         SourceProductionContext context)
     {
         var inputQueries = new List<InputQueryModel>();
-        var symbol = (INamedTypeSymbol)compilation
+        var symbol = compilation
             .GetSemanticModel(syntax.SyntaxTree)
             .GetDeclaredSymbol(syntax)!;
         foreach (var member in IgnorePropertyMethods(symbol.GetMembers()))

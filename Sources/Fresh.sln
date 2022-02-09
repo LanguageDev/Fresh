@@ -18,6 +18,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Fresh.Query.Example", "Quer
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Query", "Query", "{BDFDFC32-4CFC-4CC9-A655-3B369F6E8A7F}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RedGreenTree", "RedGreenTree", "{599C8693-C331-4B67-B8CC-A3953CBFEC84}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fresh.RedGreenTree.Cli", "RedGreenTree\Fresh.RedGreenTree.Cli\Fresh.RedGreenTree.Cli.csproj", "{04DE7654-9A67-4B4F-802B-3308CF5870B6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -40,6 +44,10 @@ Global
 		{5B55F1E3-2EBB-408D-B335-34124646AC57}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5B55F1E3-2EBB-408D-B335-34124646AC57}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5B55F1E3-2EBB-408D-B335-34124646AC57}.Release|Any CPU.Build.0 = Release|Any CPU
+		{04DE7654-9A67-4B4F-802B-3308CF5870B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{04DE7654-9A67-4B4F-802B-3308CF5870B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{04DE7654-9A67-4B4F-802B-3308CF5870B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{04DE7654-9A67-4B4F-802B-3308CF5870B6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -49,6 +57,7 @@ Global
 		{8F498785-C867-4FF2-A513-766408DEB3B7} = {BDFDFC32-4CFC-4CC9-A655-3B369F6E8A7F}
 		{B82C8E60-050F-4887-94D6-532384E862CE} = {BDFDFC32-4CFC-4CC9-A655-3B369F6E8A7F}
 		{5B55F1E3-2EBB-408D-B335-34124646AC57} = {BDFDFC32-4CFC-4CC9-A655-3B369F6E8A7F}
+		{04DE7654-9A67-4B4F-802B-3308CF5870B6} = {599C8693-C331-4B67-B8CC-A3953CBFEC84}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4AC2C123-9AF6-48A6-87C6-8F6D7E949F7F}
