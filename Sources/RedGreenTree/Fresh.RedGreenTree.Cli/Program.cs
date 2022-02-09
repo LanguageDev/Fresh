@@ -5,8 +5,7 @@ namespace Fresh.RedGreenTree.Cli;
 
 internal static class Program
 {
-    private static readonly string testXml = @"
-<?xml version=""1.0"" encoding=""UTF-8""?>
+    private static readonly string testXml = @"<?xml version=""1.0"" encoding=""UTF-8""?>
 <Tree Root=""SyntaxNode"" Namespace=""Fresh.Test"" Factory=""SyntaxFactory"">
     <Using Namespace=""System"" />
     <Using Namespace=""System.Collections.Generic"" />
