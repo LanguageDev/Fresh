@@ -20,7 +20,7 @@ internal partial interface IMathService
     public int Factorial(int n);
 }
 
-internal class MathService : IMathService
+internal sealed class MathService : IMathService
 {
     private readonly INumberInputs inputs;
     private readonly IMathService mathService;

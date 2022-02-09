@@ -21,7 +21,7 @@ namespace Fresh.Query;
 [Generator]
 public sealed class QueryProxyGenerator : IIncrementalGenerator
 {
-    private record class TypeEnclosure(string Prefix, string Suffix);
+    private sealed record class TypeEnclosure(string Prefix, string Suffix);
 
     private sealed record class InputQueryModel(
         ISymbol Symbol,
