@@ -46,13 +46,22 @@ public static class CodeGenerator
         // Class properties
         members.AddRange(node.Attributes.Select(GenerateRedClassProperty));
 
-        // Add green node property, if not abstract
+        // Add green node property and constructor, if not abstract
         if (!node.IsAbstract)
         {
-            members.Add(PropertyDeclaration(TranslateType("GreenNode"), "Green")
+            // Green node property
+            members.Add(PropertyDeclaration(IdentifierName("GreenNode"), "Green")
                 .WithModifiers(TokenList(Token(SyntaxKind.InternalKeyword)))
                 .WithAccessorList(AccessorList(SingletonList(
                     AccessorDeclaration(SyntaxKind.GetAccessorDeclaration).WithSemicolonToken(Token(SyntaxKind.SemicolonToken))))));
+
+            // Constructor
+            members.Add(ConstructorDeclaration("GreenNode")
+                .WithParameterList(ParameterList(SingletonSeparatedList(Parameter(Identifier("green")).WithType(IdentifierName("Green")))))
+                .WithBody(Block(SingletonList(ExpressionStatement(AssignmentExpression(
+                    SyntaxKind.SimpleAssignmentExpression,
+                    IdentifierName("GreenNode"),
+                    IdentifierName("green")))))));
         }
 
         var decl = ClassDeclaration(node.Name)
