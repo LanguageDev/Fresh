@@ -44,7 +44,7 @@ public static class CodeGenerator
         if (!node.IsAbstract) members.Add(GenerateGreenNodeClass(node));
 
         // Class properties
-        members.AddRange(node.Attributes.Select(GenerateRedClassProperty));
+        members.AddRange(node.Attributes.Select(GenerateRedProperty));
 
         // Add green node property and constructor, if not abstract
         if (!node.IsAbstract)
@@ -56,11 +56,15 @@ public static class CodeGenerator
                     AccessorDeclaration(SyntaxKind.GetAccessorDeclaration).WithSemicolonToken(Token(SyntaxKind.SemicolonToken))))));
 
             // Constructor
-            members.Add(ConstructorDeclaration("GreenNode")
+            members.Add(ConstructorDeclaration(node.Name)
+                .WithModifiers(TokenList(Token(SyntaxKind.InternalKeyword)))
                 .WithParameterList(ParameterList(SingletonSeparatedList(Parameter(Identifier("green")).WithType(IdentifierName("Green")))))
                 .WithBody(Block(SingletonList(ExpressionStatement(AssignmentExpression(
                     SyntaxKind.SimpleAssignmentExpression,
-                    IdentifierName("GreenNode"),
+                    MemberAccessExpression(
+                        SyntaxKind.SimpleMemberAccessExpression,
+                        ThisExpression(),
+                        IdentifierName("GreenNode")),
                     IdentifierName("green")))))));
         }
 
@@ -81,20 +85,23 @@ public static class CodeGenerator
     {
         var decl = ClassDeclaration("GreenNode")
             .WithModifiers(TokenList(Token(SyntaxKind.InternalKeyword)))
-            .WithMembers(List(node.Attributes.Select(GenerateGreenClassProperty)));
+            .WithMembers(List(node.Attributes.Select(GenerateGreenProperty)));
         return decl;
     }
 
-    private static MemberDeclarationSyntax GenerateRedClassProperty(Attribute attribute) =>
+    private static MemberDeclarationSyntax GenerateRedProperty(Attribute attribute) =>
          PropertyDeclaration(TranslateType(attribute.Type), attribute.Name)
         .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
         .WithExpressionBody(ArrowExpressionClause(MemberAccessExpression(
             SyntaxKind.SimpleMemberAccessExpression,
-            IdentifierName("Green"),
+            MemberAccessExpression(
+                SyntaxKind.SimpleMemberAccessExpression,
+                ThisExpression(),
+                IdentifierName("Green")),
             IdentifierName(attribute.Name))))
         .WithSemicolonToken(Token(SyntaxKind.SemicolonToken));
 
-    private static MemberDeclarationSyntax GenerateGreenClassProperty(Attribute attribute) =>
+    private static MemberDeclarationSyntax GenerateGreenProperty(Attribute attribute) =>
          PropertyDeclaration(TranslateType(attribute.Type), attribute.Name)
         .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
         .WithAccessorList(AccessorList(SingletonList(
