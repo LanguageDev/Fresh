@@ -77,13 +77,15 @@ public sealed class XmlConverter
     {
         var serializer = new XmlSerializer(typeof(TreeXml));
         var xmlTree = (TreeXml?)serializer.Deserialize(new StringReader(xml)) ?? throw new InvalidOperationException();
-        throw new NotImplementedException();
+        var converter = new XmlConverter();
+        return converter.Convert(xmlTree);
     }
 
     private Dictionary<string, Node> convertedNodes = new();
 
     private Tree Convert(TreeXml treeXml)
     {
+        // TODO: We need a topological ordering here
         this.convertedNodes = treeXml.Nodes
             .Select(this.Convert)
             .ToDictionary(n => n.Name);
@@ -102,7 +104,7 @@ public sealed class XmlConverter
     private Node Convert(NodeXml nodeXml) => new(
         Name: nodeXml.Name ?? throw new InvalidOperationException("'Name' attribute missing from Node XML tag"),
         IsAbstract: nodeXml.IsAbstract,
-        Base: (nodeXml.Base is null || !this.convertedNodes.TryGetValue(nodeXml.Base, out var node)) ? null : node,
+        Base: nodeXml.Base is null  ? null : this.convertedNodes[nodeXml.Base],
         Attributes: nodeXml.Attributes.Select(this.Convert).ToList());
 
     private Attribute Convert(AttributeXml attributeXml) => new(

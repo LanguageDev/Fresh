@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using Fresh.RedGreenTree.Cli.Model;
 
@@ -44,5 +45,7 @@ internal static class Program
     internal static void Main(string[] args)
     {
         var tree = XmlConverter.Convert(testXml);
+        var code = CodeGenerator.Generate(tree);
+        Console.WriteLine(code);
     }
 }
