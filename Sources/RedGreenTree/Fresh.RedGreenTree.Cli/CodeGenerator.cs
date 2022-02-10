@@ -28,10 +28,13 @@ public sealed class CodeGenerator
     private void GenerateImpl(Tree tree)
     {
         // Add the prefix
-        this.result.AppendLine($"// Generated using Fresh.RedGreenTree.Cli on {DateTime.UtcNow}");
+        this.result.AppendLine($"// Generated using Fresh.RedGreenTree.Cli on {DateTime.UtcNow}\n");
 
         // We generate all usings
-        this.result.AppendJoin('\n', tree.Usings.OrderBy(x => x).Select(n => $"using {n};")).AppendLine();
+        this.result
+            .AppendJoin('\n', tree.Usings.OrderBy(x => x).Select(n => $"using {n};"))
+            .AppendLine()
+            .AppendLine();
 
         // Namespace
         if (tree.Namespace is not null) this.result.AppendLine($"namespace {tree.Namespace};").AppendLine();
@@ -56,7 +59,9 @@ public sealed class CodeGenerator
 
     private void GenerateNodeClass(Node node)
     {
-        this.result.Append($"public class {node.Name}");
+        this.result.Append($"public ");
+        if (node.IsAbstract) this.result.Append("abstract ");
+        this.result.Append($"class {node.Name}");
         if (node.Base is not null) this.result.Append(" : ").Append(node.Base.Name);
         this.result.AppendLine();
 

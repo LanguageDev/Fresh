@@ -85,10 +85,7 @@ public sealed class XmlConverter
 
     private Tree Convert(TreeXml treeXml)
     {
-        // TODO: We need a topological ordering here
-        this.convertedNodes = treeXml.Nodes
-            .Select(this.Convert)
-            .ToDictionary(n => n.Name);
+        foreach (var node in treeXml.Nodes) this.Convert(node);
         return new(
             Root: this.convertedNodes[treeXml.Root ?? throw new InvalidOperationException("'Root' attribute missing from Tree XML tag")],
             Namespace: treeXml.Namespace,
@@ -101,11 +98,15 @@ public sealed class XmlConverter
     private string Convert(UsingXml usingXml) => usingXml.Namespace
                                               ?? throw new InvalidOperationException("'Namespace' attribute missing from Using XML tag");
 
-    private Node Convert(NodeXml nodeXml) => new(
-        Name: nodeXml.Name ?? throw new InvalidOperationException("'Name' attribute missing from Node XML tag"),
-        IsAbstract: nodeXml.IsAbstract,
-        Base: nodeXml.Base is null  ? null : this.convertedNodes[nodeXml.Base],
-        Attributes: nodeXml.Attributes.Select(this.Convert).ToList());
+    private void Convert(NodeXml nodeXml)
+    {
+        var node = new Node(
+          Name: nodeXml.Name ?? throw new InvalidOperationException("'Name' attribute missing from Node XML tag"),
+          IsAbstract: nodeXml.IsAbstract,
+          Base: nodeXml.Base is null ? null : this.convertedNodes[nodeXml.Base],
+          Attributes: nodeXml.Attributes.Select(this.Convert).ToList());
+        this.convertedNodes.Add(node.Name, node);
+    }
 
     private Attribute Convert(AttributeXml attributeXml) => new(
         Name: attributeXml.Name ?? throw new InvalidOperationException("'Name' attribute missing from Attribute XML tag"),
