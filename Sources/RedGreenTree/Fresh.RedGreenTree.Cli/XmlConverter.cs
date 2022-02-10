@@ -9,13 +9,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
+using Fresh.RedGreenTree.Cli.Model;
+using Attribute = Fresh.RedGreenTree.Cli.Model.Attribute;
 
-namespace Fresh.RedGreenTree.Cli.Model;
+namespace Fresh.RedGreenTree.Cli;
 
 /// <summary>
 /// Converts an XML string to the tree model
 /// </summary>
-public static class XmlConverter
+public sealed class XmlConverter
 {
     [XmlRoot("Tree")]
     public sealed class TreeXml
@@ -32,9 +34,6 @@ public static class XmlConverter
         [XmlElement("Using")]
         public List<UsingXml> Usings { get; set; } = new();
 
-        [XmlElement("Primitive")]
-        public List<PrimitiveXml> Primitives { get; set; } = new();
-
         [XmlElement("Node")]
         public List<NodeXml> Nodes { get; set; } = new();
     }
@@ -43,12 +42,6 @@ public static class XmlConverter
     {
         [XmlAttribute]
         public string? Namespace { get; set; }
-    }
-
-    public sealed class PrimitiveXml
-    {
-        [XmlAttribute]
-        public string? Name { get; set; }
     }
 
     public sealed class NodeXml
@@ -86,4 +79,33 @@ public static class XmlConverter
         var xmlTree = (TreeXml?)serializer.Deserialize(new StringReader(xml)) ?? throw new InvalidOperationException();
         throw new NotImplementedException();
     }
+
+    private Dictionary<string, Node> convertedNodes = new();
+
+    private Tree Convert(TreeXml treeXml)
+    {
+        this.convertedNodes = treeXml.Nodes
+            .Select(this.Convert)
+            .ToDictionary(n => n.Name);
+        return new(
+            Root: this.convertedNodes[treeXml.Root ?? throw new InvalidOperationException("'Root' attribute missing from Tree XML tag")],
+            Namespace: treeXml.Namespace,
+            Factory: treeXml.Factory,
+            Usings: treeXml.Usings.Select(this.Convert).ToHashSet(),
+            // NOTE: We do this to get them in declaration order
+            Nodes: treeXml.Nodes.Select(n => this.convertedNodes[n.Name!]).ToList());
+    }
+
+    private string Convert(UsingXml usingXml) => usingXml.Namespace
+                                              ?? throw new InvalidOperationException("'Namespace' attribute missing from Using XML tag");
+
+    private Node Convert(NodeXml nodeXml) => new(
+        Name: nodeXml.Name ?? throw new InvalidOperationException("'Name' attribute missing from Node XML tag"),
+        IsAbstract: nodeXml.IsAbstract,
+        Base: (nodeXml.Base is null || !this.convertedNodes.TryGetValue(nodeXml.Base, out var node)) ? null : node,
+        Attributes: nodeXml.Attributes.Select(this.Convert).ToList());
+
+    private Attribute Convert(AttributeXml attributeXml) => new(
+        Name: attributeXml.Name ?? throw new InvalidOperationException("'Name' attribute missing from Attribute XML tag"),
+        Type: attributeXml.Type ?? throw new InvalidOperationException("'Type' attribute missing from Attribute XML tag"));
 }

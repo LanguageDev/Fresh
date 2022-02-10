@@ -14,9 +14,11 @@ namespace Fresh.RedGreenTree.Cli.Model;
 /// Represents a single node in the syntax tree model.
 /// </summary>
 /// <param name="Name">The name of this syntax node.</param>
+/// <param name="IsAbstract">True, if this is an abstract node.</param>
 /// <param name="Base">The base of this syntax node.</param>
 /// <param name="Attributes">The attributes in this syntax node.</param>
 public sealed record class Node(
     string Name,
+    bool IsAbstract,
     Node? Base,
     IReadOnlyList<Attribute> Attributes);

@@ -17,12 +17,10 @@ namespace Fresh.RedGreenTree.Cli.Model;
 /// <param name="Namespace">The namespace the tree should be generated in.</param>
 /// <param name="Factory">The factory the builder methods need to be generated in.</param>
 /// <param name="Usings">The usings to inject into the code generation.</param>
-/// <param name="Primitives">The primitive types usable as node attributes.</param>
 /// <param name="Nodes">The node models in this tree.</param>
 public sealed record class Tree(
     Node Root,
     string? Namespace,
     string? Factory,
     IReadOnlySet<string> Usings,
-    IReadOnlySet<string> Primitives,
     IReadOnlyList<Node> Nodes);
