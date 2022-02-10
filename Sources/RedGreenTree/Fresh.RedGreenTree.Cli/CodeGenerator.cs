@@ -29,9 +29,9 @@ public static class CodeGenerator
 
     private static CompilationUnitSyntax GenerateCompilationUnit(Tree tree) =>
          CompilationUnit()
-        .WithMembers(List(tree.Nodes.Select(GenerateNodeClass)));
+        .WithMembers(List(tree.Nodes.Select(GenerateRedNodeClass)));
 
-    private static MemberDeclarationSyntax GenerateNodeClass(Node node)
+    private static MemberDeclarationSyntax GenerateRedNodeClass(Node node)
     {
         // Collect class modifiers
         var modifiers = new List<SyntaxToken> { Token(SyntaxKind.PublicKeyword) };
@@ -41,13 +41,19 @@ public static class CodeGenerator
         var members = new List<MemberDeclarationSyntax>();
 
         // Add green node, if not abstract
-        if (!node.IsAbstract)
-        {
-
-        }
+        if (!node.IsAbstract) members.Add(GenerateGreenNodeClass(node));
 
         // Class properties
-        members.AddRange(node.Attributes.Select(GenerateClassProperty));
+        members.AddRange(node.Attributes.Select(GenerateRedClassProperty));
+
+        // Add green node property, if not abstract
+        if (!node.IsAbstract)
+        {
+            members.Add(PropertyDeclaration(TranslateType("GreenNode"), "Green")
+                .WithModifiers(TokenList(Token(SyntaxKind.InternalKeyword)))
+                .WithAccessorList(AccessorList(SingletonList(
+                    AccessorDeclaration(SyntaxKind.GetAccessorDeclaration).WithSemicolonToken(Token(SyntaxKind.SemicolonToken))))));
+        }
 
         var decl = ClassDeclaration(node.Name)
             .WithModifiers(TokenList(modifiers))
@@ -56,20 +62,37 @@ public static class CodeGenerator
         // Add base
         if (node.Base is not null)
         {
-            decl = decl.WithBaseList(BaseList(SingletonSeparatedList<BaseTypeSyntax>(SimpleBaseType(TranslateType(node.Name)))));
+            decl = decl.WithBaseList(BaseList(SingletonSeparatedList<BaseTypeSyntax>(SimpleBaseType(TranslateType(node.Base.Name)))));
         }
 
         return decl;
     }
 
-    private static void GenerateNodeFactoryMethod(Node node) =>
-        throw new NotImplementedException();
+    private static MemberDeclarationSyntax GenerateGreenNodeClass(Node node)
+    {
+        var decl = ClassDeclaration("GreenNode")
+            .WithModifiers(TokenList(Token(SyntaxKind.InternalKeyword)))
+            .WithMembers(List(node.Attributes.Select(GenerateGreenClassProperty)));
+        return decl;
+    }
 
-    private static MemberDeclarationSyntax GenerateClassProperty(Attribute attribute) =>
+    private static MemberDeclarationSyntax GenerateRedClassProperty(Attribute attribute) =>
+         PropertyDeclaration(TranslateType(attribute.Type), attribute.Name)
+        .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
+        .WithExpressionBody(ArrowExpressionClause(MemberAccessExpression(
+            SyntaxKind.SimpleMemberAccessExpression,
+            IdentifierName("Green"),
+            IdentifierName(attribute.Name))))
+        .WithSemicolonToken(Token(SyntaxKind.SemicolonToken));
+
+    private static MemberDeclarationSyntax GenerateGreenClassProperty(Attribute attribute) =>
          PropertyDeclaration(TranslateType(attribute.Type), attribute.Name)
         .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
         .WithAccessorList(AccessorList(SingletonList(
             AccessorDeclaration(SyntaxKind.GetAccessorDeclaration).WithSemicolonToken(Token(SyntaxKind.SemicolonToken)))));
+
+    private static void GenerateNodeFactoryMethod(Node node) =>
+        throw new NotImplementedException();
 
     // NOTE: Quite cheesy solution
     private static TypeSyntax TranslateType(string type) =>
