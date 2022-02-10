@@ -14,7 +14,7 @@ internal static class Program
     <Primitive Name=""Token"" />
     <Primitive Name=""List[T]"" />
 
-    <Node Name=""SyntaxNode"" Abstract=""true"" />
+    <Node Name=""SyntaxNode"" IsAbstract=""true"" />
 
     <Node Name=""StatementSyntax"" Base=""SyntaxNode"" IsAbstract=""true"" />
     <Node Name=""DeclarationSyntax"" Base=""StatementSyntax"" IsAbstract=""true"" />

@@ -8,74 +8,70 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Fresh.RedGreenTree.Cli.Model;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Attribute = Fresh.RedGreenTree.Cli.Model.Attribute;
+using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace Fresh.RedGreenTree.Cli;
 
 /// <summary>
 /// Provides C# code generation for the tree model.
 /// </summary>
-public sealed class CodeGenerator
+public static class CodeGenerator
 {
-    public static string Generate(Tree tree)
+    public static string Generate(Tree tree) =>
+         GenerateCompilationUnit(tree)
+        .NormalizeWhitespace()
+        .GetText()
+        .ToString();
+
+    private static CompilationUnitSyntax GenerateCompilationUnit(Tree tree) =>
+         CompilationUnit()
+        .WithMembers(List(tree.Nodes.Select(GenerateNodeClass)));
+
+    private static MemberDeclarationSyntax GenerateNodeClass(Node node)
     {
-        var generator = new CodeGenerator();
-        generator.GenerateImpl(tree);
-        return generator.result.ToString();
-    }
+        // Collect class modifiers
+        var modifiers = new List<SyntaxToken> { Token(SyntaxKind.PublicKeyword) };
+        if (node.IsAbstract) modifiers.Add(Token(SyntaxKind.AbstractKeyword));
 
-    private readonly StringBuilder result = new();
+        // Collect class members
+        var members = new List<MemberDeclarationSyntax>();
 
-    private void GenerateImpl(Tree tree)
-    {
-        // Add the prefix
-        this.result.AppendLine($"// Generated using Fresh.RedGreenTree.Cli on {DateTime.UtcNow}\n");
-
-        // We generate all usings
-        this.result
-            .AppendJoin('\n', tree.Usings.OrderBy(x => x).Select(n => $"using {n};"))
-            .AppendLine()
-            .AppendLine();
-
-        // Namespace
-        if (tree.Namespace is not null) this.result.AppendLine($"namespace {tree.Namespace};").AppendLine();
-
-        // If there is a factory, generate that
-        if (tree.Factory is not null)
+        // Add green node, if not abstract
+        if (!node.IsAbstract)
         {
-            this.result
-                .AppendLine($"public static class {tree.Factory}")
-                .AppendLine("{");
 
-            foreach (var node in tree.Nodes) this.GenerateNodeFactory(node);
-
-            this.result
-                .AppendLine("}")
-                .AppendLine();
         }
 
-        // Nodes
-        foreach (var node in tree.Nodes) this.GenerateNodeClass(node);
+        // Class properties
+        members.AddRange(node.Attributes.Select(GenerateClassProperty));
+
+        var decl = ClassDeclaration(node.Name)
+            .WithModifiers(TokenList(modifiers))
+            .WithMembers(List(members));
+
+        // Add base
+        if (node.Base is not null)
+        {
+            decl = decl.WithBaseList(BaseList(SingletonSeparatedList<BaseTypeSyntax>(SimpleBaseType(TranslateType(node.Name)))));
+        }
+
+        return decl;
     }
 
-    private void GenerateNodeClass(Node node)
-    {
-        this.result.Append($"public ");
-        if (node.IsAbstract) this.result.Append("abstract ");
-        this.result.Append($"class {node.Name}");
-        if (node.Base is not null) this.result.Append(" : ").Append(node.Base.Name);
-        this.result.AppendLine();
+    private static void GenerateNodeFactoryMethod(Node node) =>
+        throw new NotImplementedException();
 
-        this.result
-            .AppendLine("{")
-            .AppendLine("    // TODO")
-            .AppendLine("}")
-            .AppendLine();
-    }
+    private static MemberDeclarationSyntax GenerateClassProperty(Attribute attribute) =>
+         PropertyDeclaration(TranslateType(attribute.Type), attribute.Name)
+        .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
+        .WithAccessorList(AccessorList(SingletonList(
+            AccessorDeclaration(SyntaxKind.GetAccessorDeclaration).WithSemicolonToken(Token(SyntaxKind.SemicolonToken)))));
 
-    private void GenerateNodeFactory(Node node)
-    {
-        this.result
-            .AppendLine($"    public static {node.Name} {node.Name}(/* TODO */) =>")
-            .AppendLine("        throw new NotImplementedException();");
-    }
+    // NOTE: Quite cheesy solution
+    private static TypeSyntax TranslateType(string type) =>
+        ParseTypeName(type.Replace('[', '<').Replace(']', '>'));
 }
