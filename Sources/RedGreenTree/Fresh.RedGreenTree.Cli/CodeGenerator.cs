@@ -27,9 +27,23 @@ public static class CodeGenerator
         .GetText()
         .ToString();
 
-    private static CompilationUnitSyntax GenerateCompilationUnit(Tree tree) =>
-         CompilationUnit()
-        .WithMembers(List(tree.Nodes.Select(GenerateRedNodeClass)));
+    private static CompilationUnitSyntax GenerateCompilationUnit(Tree tree)
+    {
+        var members = new List<MemberDeclarationSyntax>();
+        members.AddRange(tree.Nodes.Select(GenerateRedNodeClass));
+
+        if (tree.Factory is not null)
+        {
+            members.Add(ClassDeclaration(tree.Factory)
+                .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.StaticKeyword)))
+                .WithMembers(List(tree.Nodes
+                    .Where(n => !n.IsAbstract)
+                    .Select(GenerateNodeFactoryMethod))));
+        }
+
+        return CompilationUnit()
+            .WithMembers(List(members));
+    }
 
     private static MemberDeclarationSyntax GenerateRedNodeClass(Node node)
     {
@@ -125,8 +139,20 @@ public static class CodeGenerator
         .WithAccessorList(AccessorList(SingletonList(
             AccessorDeclaration(SyntaxKind.GetAccessorDeclaration).WithSemicolonToken(Token(SyntaxKind.SemicolonToken)))));
 
-    private static void GenerateNodeFactoryMethod(Node node) =>
-        throw new NotImplementedException();
+    private static MemberDeclarationSyntax GenerateNodeFactoryMethod(Node node) =>
+         MethodDeclaration(
+             IdentifierName(node.Name),
+             node.Name.EndsWith("Syntax") ? node.Name[..^"Syntax".Length] : node.Name)
+        .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.StaticKeyword)))
+        .WithParameterList(ParameterList(SeparatedList(node.Attributes.Select(attr =>
+             Parameter(Identifier(ToCamelCase(attr.Name))).WithType(TranslateType(attr.Type))))))
+        .WithExpressionBody(ArrowExpressionClause(
+            ObjectCreationExpression(IdentifierName(node.Name))
+                .WithArgumentList(ArgumentList(SingletonSeparatedList(Argument(
+                    ObjectCreationExpression(QualifiedName(IdentifierName(node.Name), IdentifierName("GreenNode")))
+                        .WithArgumentList(ArgumentList(SeparatedList(node.Attributes.Select(attr =>
+                            Argument(IdentifierName(ToCamelCase(attr.Name)))))))))))))
+        .WithSemicolonToken(Token(SyntaxKind.SemicolonToken));
 
     // NOTE: Quite cheesy solution
     private static TypeSyntax TranslateType(string type) =>
