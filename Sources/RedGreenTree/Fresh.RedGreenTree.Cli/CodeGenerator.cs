@@ -58,13 +58,13 @@ public static class CodeGenerator
             // Constructor
             members.Add(ConstructorDeclaration(node.Name)
                 .WithModifiers(TokenList(Token(SyntaxKind.InternalKeyword)))
-                .WithParameterList(ParameterList(SingletonSeparatedList(Parameter(Identifier("green")).WithType(IdentifierName("Green")))))
+                .WithParameterList(ParameterList(SingletonSeparatedList(Parameter(Identifier("green")).WithType(IdentifierName("GreenNode")))))
                 .WithBody(Block(SingletonList(ExpressionStatement(AssignmentExpression(
                     SyntaxKind.SimpleAssignmentExpression,
                     MemberAccessExpression(
                         SyntaxKind.SimpleMemberAccessExpression,
                         ThisExpression(),
-                        IdentifierName("GreenNode")),
+                        IdentifierName("Green")),
                     IdentifierName("green")))))));
         }
 
@@ -83,9 +83,27 @@ public static class CodeGenerator
 
     private static MemberDeclarationSyntax GenerateGreenNodeClass(Node node)
     {
+        var members = new List<MemberDeclarationSyntax>();
+
+        // Add properties
+        members.AddRange(node.Attributes.Select(GenerateGreenProperty));
+
+        // Add constructor
+        members.Add(ConstructorDeclaration("GreenNode")
+            .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
+            .WithParameterList(ParameterList(SeparatedList(node.Attributes.Select(attr =>
+                Parameter(Identifier(ToCamelCase(attr.Name))).WithType(TranslateType(attr.Type))))))
+            .WithBody(Block(List(node.Attributes.Select(attr => ExpressionStatement(AssignmentExpression(
+                SyntaxKind.SimpleAssignmentExpression,
+                MemberAccessExpression(
+                    SyntaxKind.SimpleMemberAccessExpression,
+                    ThisExpression(),
+                    IdentifierName(attr.Name)),
+                IdentifierName(ToCamelCase(attr.Name)))))))));
+
         var decl = ClassDeclaration("GreenNode")
             .WithModifiers(TokenList(Token(SyntaxKind.InternalKeyword)))
-            .WithMembers(List(node.Attributes.Select(GenerateGreenProperty)));
+            .WithMembers(List(members));
         return decl;
     }
 
@@ -113,4 +131,6 @@ public static class CodeGenerator
     // NOTE: Quite cheesy solution
     private static TypeSyntax TranslateType(string type) =>
         ParseTypeName(type.Replace('[', '<').Replace(']', '>'));
+
+    private static string ToCamelCase(string s) => $"{char.ToLower(s[0])}{s[1..]}";
 }
