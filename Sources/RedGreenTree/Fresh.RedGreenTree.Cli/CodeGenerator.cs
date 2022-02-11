@@ -19,33 +19,42 @@ namespace Fresh.RedGreenTree.Cli;
 /// <summary>
 /// Provides C# code generation for the tree model.
 /// </summary>
-public static class CodeGenerator
+public sealed class CodeGenerator
 {
-    public static string Generate(Tree tree) =>
-         GenerateCompilationUnit(tree)
+    public static string Generate(Tree tree) => new CodeGenerator(tree)
+        .GenerateCompilationUnit()
         .NormalizeWhitespace()
         .GetText()
         .ToString();
 
-    private static CompilationUnitSyntax GenerateCompilationUnit(Tree tree)
+    private readonly Tree tree;
+    private readonly Dictionary<string, Node> nodes;
+
+    private CodeGenerator(Tree tree)
+    {
+        this.tree = tree;
+        this.nodes = tree.Nodes.ToDictionary(n => n.Name);
+    }
+
+    private CompilationUnitSyntax GenerateCompilationUnit()
     {
         var members = new List<MemberDeclarationSyntax>();
-        members.AddRange(tree.Nodes.Select(GenerateRedNodeClass));
+        members.AddRange(this.tree.Nodes.Select(this.GenerateRedNodeClass));
 
-        if (tree.Factory is not null)
+        if (this.tree.Factory is not null)
         {
-            members.Add(ClassDeclaration(tree.Factory)
+            members.Add(ClassDeclaration(this.tree.Factory)
                 .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.StaticKeyword)))
-                .WithMembers(List(tree.Nodes
+                .WithMembers(List(this.tree.Nodes
                     .Where(n => !n.IsAbstract)
-                    .Select(GenerateNodeFactoryMethod))));
+                    .Select(this.GenerateNodeFactoryMethod))));
         }
 
         return CompilationUnit()
             .WithMembers(List(members));
     }
 
-    private static MemberDeclarationSyntax GenerateRedNodeClass(Node node)
+    private MemberDeclarationSyntax GenerateRedNodeClass(Node node)
     {
         // Collect class modifiers
         var modifiers = new List<SyntaxToken> { Token(SyntaxKind.PublicKeyword) };
@@ -55,10 +64,10 @@ public static class CodeGenerator
         var members = new List<MemberDeclarationSyntax>();
 
         // Add green node, if not abstract
-        if (!node.IsAbstract) members.Add(GenerateGreenNodeClass(node));
+        if (!node.IsAbstract) members.Add(this.GenerateGreenNodeClass(node));
 
         // Class properties
-        members.AddRange(node.Attributes.Select(GenerateRedProperty));
+        members.AddRange(node.Attributes.Select(attr => this.GenerateRedProperty(node, attr)));
 
         // Add green node property and constructor, if not abstract
         if (!node.IsAbstract)
@@ -95,12 +104,12 @@ public static class CodeGenerator
         return decl;
     }
 
-    private static MemberDeclarationSyntax GenerateGreenNodeClass(Node node)
+    private MemberDeclarationSyntax GenerateGreenNodeClass(Node node)
     {
         var members = new List<MemberDeclarationSyntax>();
 
         // Add properties
-        members.AddRange(node.Attributes.Select(GenerateGreenProperty));
+        members.AddRange(node.Attributes.Select(this.GenerateGreenProperty));
 
         // Add constructor
         members.Add(ConstructorDeclaration("GreenNode")
@@ -121,25 +130,35 @@ public static class CodeGenerator
         return decl;
     }
 
-    private static MemberDeclarationSyntax GenerateRedProperty(Attribute attribute) =>
-         PropertyDeclaration(TranslateType(attribute.Type), attribute.Name)
-        .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
-        .WithExpressionBody(ArrowExpressionClause(MemberAccessExpression(
-            SyntaxKind.SimpleMemberAccessExpression,
-            MemberAccessExpression(
-                SyntaxKind.SimpleMemberAccessExpression,
-                ThisExpression(),
-                IdentifierName("Green")),
-            IdentifierName(attribute.Name))))
-        .WithSemicolonToken(Token(SyntaxKind.SemicolonToken));
+    private MemberDeclarationSyntax GenerateRedProperty(Node node, Attribute attribute) =>
+        PropertyDeclaration(TranslateType(attribute.Type), attribute.Name)
+            .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
+            .WithExpressionBody(ArrowExpressionClause(
+                this.nodes.TryGetValue(attribute.Type, out var attrNode)
+                ? InvocationExpression(MemberAccessExpression(
+                    SyntaxKind.SimpleMemberAccessExpression,
+                    MemberAccessExpression(
+                        SyntaxKind.SimpleMemberAccessExpression,
+                        MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, ThisExpression(), IdentifierName("Green")),
+                        IdentifierName(attribute.Name)),
+                    IdentifierName("ToRed")))
+                : MemberAccessExpression(
+                    SyntaxKind.SimpleMemberAccessExpression,
+                    MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, ThisExpression(), IdentifierName("Green")),
+                    IdentifierName(attribute.Name))))
+            .WithSemicolonToken(Token(SyntaxKind.SemicolonToken));
 
-    private static MemberDeclarationSyntax GenerateGreenProperty(Attribute attribute) =>
-         PropertyDeclaration(TranslateType(attribute.Type), attribute.Name)
-        .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
-        .WithAccessorList(AccessorList(SingletonList(
-            AccessorDeclaration(SyntaxKind.GetAccessorDeclaration).WithSemicolonToken(Token(SyntaxKind.SemicolonToken)))));
+    private MemberDeclarationSyntax GenerateGreenProperty(Attribute attribute)
+    {
+        var decl = PropertyDeclaration(TranslateType(attribute.Type), attribute.Name)
+            .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
+            .WithAccessorList(AccessorList(SingletonList(
+                AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
+                    .WithSemicolonToken(Token(SyntaxKind.SemicolonToken)))));
+        return decl;
+    }
 
-    private static MemberDeclarationSyntax GenerateNodeFactoryMethod(Node node) =>
+    private MemberDeclarationSyntax GenerateNodeFactoryMethod(Node node) =>
          MethodDeclaration(
              IdentifierName(node.Name),
              node.Name.EndsWith("Syntax") ? node.Name[..^"Syntax".Length] : node.Name)
