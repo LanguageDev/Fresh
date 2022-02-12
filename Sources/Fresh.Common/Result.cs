@@ -15,7 +15,7 @@ namespace Fresh.Common;
 /// </summary>
 /// <typeparam name="TOk">The ok (success) type.</typeparam>
 /// <typeparam name="TError">The error type.</typeparam>
-public readonly struct Result<TOk, TError>
+public readonly struct Result<TOk, TError> : IEquatable<Result<TOk, TError>>
 {
     /// <summary>
     /// True, if this result is a successful alternative.
@@ -61,6 +61,21 @@ public readonly struct Result<TOk, TError>
     public static implicit operator Result<TOk, TError>(TOk ok) => new(ok);
 
     public static implicit operator Result<TOk, TError>(TError error) => new(error);
+
+    public override bool Equals(object? obj) =>
+        obj is Result<TOk, TError> other && this.Equals(other);
+
+    public bool Equals(Result<TOk, TError> other) => this.IsOk
+        ? (other.IsOk && this.okValue!.Equals(other.okValue))
+        : (other.IsError && this.errorValue!.Equals(other.errorValue));
+
+    public static bool operator ==(Result<TOk, TError> left, Result<TOk, TError> right) => left.Equals(right);
+
+    public static bool operator !=(Result<TOk, TError> left, Result<TOk, TError> right) => !(left == right);
+
+    public override int GetHashCode() => this.IsOk
+        ? this.okValue!.GetHashCode()
+        : this.errorValue!.GetHashCode();
 
     /// <summary>
     /// Unwraps the success value of this result or returns a default, if it's an error result.
