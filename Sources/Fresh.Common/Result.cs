@@ -31,8 +31,8 @@ public readonly struct Result<TOk, TError> : IEquatable<Result<TOk, TError>>
     /// Unwraps the success value of the result.
     /// </summary>
     public TOk UnwrapOk => this.IsOk
-                       ? this.okValue!
-                       : throw new InvalidOperationException("Tried to unwrap Result with an error value!");
+                         ? this.okValue!
+                         : throw new InvalidOperationException("Tried to unwrap Result with an error value!");
 
     /// <summary>
     /// Unwraps the error value of the result.
