@@ -15,13 +15,42 @@ namespace Fresh.Syntax;
 /// </summary>
 public sealed class SourceText
 {
-    private readonly string name;
+    /// <summary>
+    /// Creates a new <see cref="SourceText"/> from a name and the contents.
+    /// </summary>
+    /// <param name="name">The name of the source to create.</param>
+    /// <param name="text">The contents of the source.</param>
+    /// <returns>A new <see cref="SourceText"/> with the name <paramref name="name"/> and contents <paramref name="text"/>.</returns>
+    public static SourceText FromString(string name, string text) => new(name, text);
+
+    /// <summary>
+    /// The name of this source.
+    /// </summary>
+    public string Name { get; }
+
+    /// <summary>
+    /// Retrieves a reader for the source contents.
+    /// </summary>
+    public TextReader Reader => new StringReader(this.text);
+
     private readonly string text;
     private List<ReadOnlyMemory<char>>? lines;
 
+    /// <summary>
+    /// The list of lines in this source.
+    /// </summary>
+    public IReadOnlyList<ReadOnlyMemory<char>> Lines
+    {
+        get
+        {
+            this.lines ??= this.ComputeLines();
+            return this.lines;
+        }
+    }
+
     private SourceText(string name, string text)
     {
-        this.name = name;
+        this.Name = name;
         this.text = text;
     }
 
