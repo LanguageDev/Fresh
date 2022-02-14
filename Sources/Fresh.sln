@@ -22,9 +22,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Fresh.Common", "Fresh.Commo
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Syntax", "Syntax", "{575AD593-9851-499E-BF96-BDF55A1995F4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fresh.Syntax", "Syntax\Fresh.Syntax\Fresh.Syntax.csproj", "{BD413188-7FE6-4A95-A1B8-0D1635A1997B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Fresh.Syntax", "Syntax\Fresh.Syntax\Fresh.Syntax.csproj", "{BD413188-7FE6-4A95-A1B8-0D1635A1997B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fresh.Syntax.Tests", "Syntax\Fresh.Syntax.Tests\Fresh.Syntax.Tests.csproj", "{1EEC82A5-5D08-49A2-9089-118F54119357}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Fresh.Syntax.Tests", "Syntax\Fresh.Syntax.Tests\Fresh.Syntax.Tests.csproj", "{1EEC82A5-5D08-49A2-9089-118F54119357}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fresh.Syntax.Example", "Syntax\Fresh.Syntax.Example\Fresh.Syntax.Example.csproj", "{E15BAA50-4C88-4E0F-ACFE-2088E44A86E2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -60,6 +62,10 @@ Global
 		{1EEC82A5-5D08-49A2-9089-118F54119357}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1EEC82A5-5D08-49A2-9089-118F54119357}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1EEC82A5-5D08-49A2-9089-118F54119357}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E15BAA50-4C88-4E0F-ACFE-2088E44A86E2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E15BAA50-4C88-4E0F-ACFE-2088E44A86E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E15BAA50-4C88-4E0F-ACFE-2088E44A86E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E15BAA50-4C88-4E0F-ACFE-2088E44A86E2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -71,6 +77,7 @@ Global
 		{5B55F1E3-2EBB-408D-B335-34124646AC57} = {BDFDFC32-4CFC-4CC9-A655-3B369F6E8A7F}
 		{BD413188-7FE6-4A95-A1B8-0D1635A1997B} = {575AD593-9851-499E-BF96-BDF55A1995F4}
 		{1EEC82A5-5D08-49A2-9089-118F54119357} = {575AD593-9851-499E-BF96-BDF55A1995F4}
+		{E15BAA50-4C88-4E0F-ACFE-2088E44A86E2} = {575AD593-9851-499E-BF96-BDF55A1995F4}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4AC2C123-9AF6-48A6-87C6-8F6D7E949F7F}

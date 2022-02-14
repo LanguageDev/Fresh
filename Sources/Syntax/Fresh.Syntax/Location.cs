@@ -15,4 +15,4 @@ namespace Fresh.Syntax;
 /// </summary>
 /// <param name="Source">The source text the location points into.</param>
 /// <param name="Range">The pointed range in the source.</param>
-public record class Location(SourceText Source, Range Range);
+public sealed record class Location(SourceText Source, Range Range);
