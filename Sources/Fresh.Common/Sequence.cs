@@ -14,6 +14,11 @@ namespace Fresh.Common;
 /// <param name="Elements">The backing sequence.</param>
 public readonly record struct Sequence<T>(IReadOnlyList<T> Elements) : IReadOnlyList<T>
 {
+    /// <summary>
+    /// An empty sequence.
+    /// </summary>
+    public static Sequence<T> Empty { get; } = new(Array.Empty<T>());
+
     public int Count => this.Elements.Count;
 
     public T this[int index] => this.Elements[index];
