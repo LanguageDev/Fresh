@@ -50,15 +50,26 @@ public sealed class Lexer
     /// <returns>The next token in the source.</returns>
     public Token Next()
     {
-    begin:
         // End of source
         if (!this.TryPeek(0, out var ch)) return this.Take(0, TokenType.End);
 
-        // Whitespace or control character, ignore
-        if (char.IsWhiteSpace(ch) || char.IsControl(ch))
+        // UNIX-newline
+        if (ch == '\n') return this.Take(1, TokenType.Newline);
+        // Windows or OS-X 9 newline
+        if (ch == '\r')
         {
-            this.Skip(1);
-            goto begin;
+            // Windows
+            if (this.TryPeek(1, out var ch2) && ch2 == '\n') return this.Take(2, TokenType.Newline);
+            // OS-X 9
+            return this.Take(1, TokenType.Newline);
+        }
+
+        // Whitespace or control character, but not newline
+        if (IsSpace(ch))
+        {
+            var offset = 1;
+            for (; IsSpace(this.Peek(offset, '\n')); ++offset) ;
+            return this.Take(offset, TokenType.Whitespace);
         }
 
         // Line-comment
@@ -186,6 +197,9 @@ public sealed class Lexer
     }
 
     private static bool IsIdentifier(char ch) => char.IsLetterOrDigit(ch) || ch == '_';
+
+    private static bool IsSpace(char ch) =>
+        ch != '\n' && ch != '\r' && (char.IsWhiteSpace(ch) || char.IsControl(ch));
 
     private static bool IsNewline(char ch) => ch == '\n' || ch == '\r';
 }

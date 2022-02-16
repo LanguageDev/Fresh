@@ -15,6 +15,8 @@ namespace Fresh.Syntax;
 /// </summary>
 public enum TokenType
 {
+    // Basic
+
     /// <summary>
     /// End of input text.
     /// </summary>
@@ -26,9 +28,28 @@ public enum TokenType
     Unknown,
 
     /// <summary>
+    /// Denotes a missing token when parsing.
+    /// </summary>
+    Missing,
+
+    // Trivia
+
+    /// <summary>
     /// A single-line comment.
     /// </summary>
     LineComment,
+
+    /// <summary>
+    /// A sequence of whitespace characters.
+    /// </summary>
+    Whitespace,
+
+    /// <summary>
+    /// A newline sequence. Either '\n', `\r` or `\r\n`.
+    /// </summary>
+    Newline,
+
+    // Language
 
     /// <summary>
     /// '('.
@@ -104,4 +125,20 @@ public enum TokenType
     /// A simple integer.
     /// </summary>
     IntegerLiteral,
+}
+
+/// <summary>
+/// Utilities on <see cref="TokenType"/>s.
+/// </summary>
+public static class TokenTypeExtensions
+{
+    /// <summary>
+    /// Checks if a given <see cref="TokenType"/>
+    /// </summary>
+    /// <param name="tokenType"></param>
+    /// <returns></returns>
+    public static bool IsTrivia(this TokenType tokenType) =>
+        tokenType is TokenType.LineComment
+                  or TokenType.Whitespace
+                  or TokenType.Newline;
 }

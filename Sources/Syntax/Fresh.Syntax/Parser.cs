@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Fresh.Common;
 
 namespace Fresh.Syntax;
 
@@ -15,4 +16,14 @@ namespace Fresh.Syntax;
 /// </summary>
 public sealed class Parser
 {
+    private readonly IEnumerator<Token> tokenSource;
+    // Holds raw peeked tokens
+    private readonly RingBuffer<Token> tokenPeekBuffer = new();
+    // Holds peeked syntax tokens that have their trivia attached
+    private readonly RingBuffer<SyntaxToken> syntaxTokenPeekBuffer = new();
+
+    private Parser(IEnumerator<Token> tokenSource)
+    {
+        this.tokenSource = tokenSource;
+    }
 }

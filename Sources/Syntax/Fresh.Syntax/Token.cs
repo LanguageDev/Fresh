@@ -16,4 +16,10 @@ namespace Fresh.Syntax;
 /// <param name="Location">The location of the token.</param>
 /// <param name="Type">The type of the token.</param>
 /// <param name="Text">The text the token was parsed from.</param>
-public sealed record class Token(Location Location, TokenType Type, string Text);
+public sealed record class Token(Location Location, TokenType Type, string Text)
+{
+    /// <summary>
+    /// True, if this is a trivia token.
+    /// </summary>
+    public bool IsTrivia => this.Type.IsTrivia();
+}

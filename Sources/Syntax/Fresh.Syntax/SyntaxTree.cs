@@ -97,7 +97,7 @@ public sealed record class FunctionDeclarationSyntax(
     SyntaxToken FuncKeyword,
     SyntaxToken Name,
     ArgumentListSyntax ArgumentList,
-    BlockSyntax Body) : DeclarationSyntax
+    ExpressionSyntax Body) : DeclarationSyntax
 {
     /// <inheritdoc/>
     public override CommentGroup? Documentation => this.GetDocumentationFor(this.FuncKeyword);
