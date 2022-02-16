@@ -24,12 +24,12 @@ public readonly record struct CommentGroup(Sequence<Token> Comments);
 /// <param name="Token">The token that is part of the syntax tree.</param>
 /// <param name="TrailingTrivia">The sequence of comment groups after this token.</param>
 public readonly record struct SyntaxToken(
-    Sequence<Token>? LeadingTrivia,
+    Sequence<Token> LeadingTrivia,
     Token Token,
-    Sequence<Token>? TrailingTrivia)
+    Sequence<Token> TrailingTrivia)
 {
     public SyntaxToken(Token Token)
-        : this(null, Token, null)
+        : this(Sequence<Token>.Empty, Token, Sequence<Token>.Empty)
     {
     }
 }

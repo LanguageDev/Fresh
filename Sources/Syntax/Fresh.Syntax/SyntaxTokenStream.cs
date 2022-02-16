@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
@@ -18,8 +19,72 @@ namespace Fresh.Syntax;
 /// </summary>
 public sealed class SyntaxTokenStream
 {
+    /// <summary>
+    /// Processes a sequence of raw <see cref="Token"/>s into a sequence of <see cref="SyntaxToken"/>s
+    /// that contain trivia information.
+    /// </summary>
+    /// <param name="tokens">The sequence of tokens to process.</param>
+    /// <returns>The sequence of syntax tokens made from <paramref name="tokens"/>.</returns>
+    public static IEnumerable<SyntaxToken> Process(IEnumerable<Token> tokens)
+    {
+        var stream = new SyntaxTokenStream(tokens.GetEnumerator());
+        while (true)
+        {
+            var t = stream.Next();
+            yield return t;
+            if (t.Token.Type == TokenType.End) break;
+        }
+    }
+
     private readonly IEnumerator<Token> tokens;
     private readonly RingBuffer<Token> peekBuffer = new();
+
+    private SyntaxTokenStream(IEnumerator<Token> tokens)
+    {
+        this.tokens = tokens;
+    }
+
+    /// <summary>
+    /// Retrieves the next <see cref="SyntaxToken"/>.
+    /// </summary>
+    /// <returns>The next <see cref="SyntaxToken"/> with leading and trailing trivia.</returns>
+    public SyntaxToken Next()
+    {
+        // We collect trivia tokens as long as possible, this will be our leading trivial
+        var offs = 0;
+        for (; this.TryPeek(offs, out var t) && t.IsTrivia; ++offs) ;
+        var leadingTrivia = offs > 0 ? this.Take(offs) : Sequence<Token>.Empty;
+        // We now expect a token, which is not a trivia token
+        // If we don't get a token here, it means something went terribly wrong
+        // This is because all trivia tokens must have been attached to some token before EOF.
+        var token = this.Take();
+        Debug.Assert(!token.IsTrivia);
+        // Now we start collecting trailing trivia as long as possible
+        // If we find a token later that's not trivia, we only consider trailing trivia inline with the original token
+        // We first consume trivia until the end of line
+        offs = 0;
+        for (; this.TryPeek(offs, out var t) && t.IsTrivia && t.Location.Start.Line == token.Location.End.Line; ++offs) ;
+        // Now we can save the end of line
+        var endOfLineOffs = offs;
+        // Now we continue until we either hit the EOF (all is trivia) or a non-trivia token (only until end of line)
+        while (true)
+        {
+            if (!this.TryPeek(offs, out var t) || t.Type == TokenType.End)
+            {
+                // EOF hit, all is trivia
+                var trailingTrivia = offs > 0 ? this.Take(offs) : Sequence<Token>.Empty;
+                return new(leadingTrivia, token, trailingTrivia);
+            }
+            if (!t.IsTrivia)
+            {
+                // Not a trivia anymore, only consume until end of line
+                var trailingTrivia = endOfLineOffs > 0 ? this.Take(endOfLineOffs) : Sequence<Token>.Empty;
+                return new(leadingTrivia, token, trailingTrivia);
+            }
+            // Still trivia
+            ++offs;
+        }
+    }
 
     private Token Take()
     {
