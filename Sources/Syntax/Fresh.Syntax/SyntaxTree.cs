@@ -24,9 +24,9 @@ public readonly record struct CommentGroup(Sequence<Token> Comments);
 /// <param name="Token">The token that is part of the syntax tree.</param>
 /// <param name="TrailingTrivia">The sequence of comment groups after this token.</param>
 public readonly record struct SyntaxToken(
-    Sequence<CommentGroup>? LeadingTrivia,
+    Sequence<Token>? LeadingTrivia,
     Token Token,
-    Sequence<CommentGroup>? TrailingTrivia)
+    Sequence<Token>? TrailingTrivia)
 {
     public SyntaxToken(Token Token)
         : this(null, Token, null)
@@ -47,12 +47,12 @@ public abstract record class SyntaxNode
     /// <summary>
     /// The leading trivia of this syntax node.
     /// </summary>
-    public abstract Sequence<CommentGroup>? LeadingTrivia { get; }
+    public abstract Sequence<Token>? LeadingTrivia { get; }
 
     /// <summary>
     /// The trailing trivia of this syntax node.
     /// </summary>
-    public abstract Sequence<CommentGroup>? TrailingTrivia { get; }
+    public abstract Sequence<Token>? TrailingTrivia { get; }
 
     /// <summary>
     /// Utility to read out a doc comment attached right above a token from the <see cref="SyntaxNode.LeadingTrivia"/>.
@@ -65,14 +65,22 @@ public abstract record class SyntaxNode
         if (this.LeadingTrivia is null) return null;
         var leading = this.LeadingTrivia.Value;
         if (leading.Count == 0) return null;
-        var lastLeading = leading[^1];
-        // NOTE: Should not happen
-        if (lastLeading.Comments.Count == 0) return null;
-
-        // There is, check if the last token is just below that
-        var lastComment = lastLeading.Comments[^1];
-        if (lastComment.Location.Start.Line != token.Token.Location.End.Line - 1) return null;
-        return lastLeading;
+        // Take comments in reverse order
+        var lastComments = leading
+            .Where(t => t.IsComment)
+            .Reverse();
+        // Take comments while they are strictly stuck together
+        var comments = new List<Token>();
+        var minAllowedLine = token.Token.Location.Start.Line - 1;
+        foreach (var comment in comments)
+        {
+            if (comment.Location.Start.Line < minAllowedLine) break;
+            comments.Add(comment);
+            minAllowedLine = comment.Location.Start.Line - 1;
+        }
+        if (comments.Count == 0) return null;
+        comments.Reverse();
+        return new(comments.ToSequence());
     }
 }
 
@@ -103,10 +111,10 @@ public sealed record class FunctionDeclarationSyntax(
     public override CommentGroup? Documentation => this.GetDocumentationFor(this.FuncKeyword);
 
     /// <inheritdoc/>
-    public override Sequence<CommentGroup>? LeadingTrivia => this.FuncKeyword.LeadingTrivia;
+    public override Sequence<Token>? LeadingTrivia => this.FuncKeyword.LeadingTrivia;
 
     /// <inheritdoc/>
-    public override Sequence<CommentGroup>? TrailingTrivia => this.Body.TrailingTrivia;
+    public override Sequence<Token>? TrailingTrivia => this.Body.TrailingTrivia;
 }
 
 /// <summary>
@@ -119,10 +127,10 @@ public sealed record class ArgumentListSyntax(
     SyntaxToken CloseParenthesis) : SyntaxNode
 {
     /// <inheritdoc/>
-    public override Sequence<CommentGroup>? LeadingTrivia => this.OpenParenthesis.LeadingTrivia;
+    public override Sequence<Token>? LeadingTrivia => this.OpenParenthesis.LeadingTrivia;
 
     /// <inheritdoc/>
-    public override Sequence<CommentGroup>? TrailingTrivia => this.CloseParenthesis.TrailingTrivia;
+    public override Sequence<Token>? TrailingTrivia => this.CloseParenthesis.TrailingTrivia;
 }
 
 /// <summary>
@@ -140,8 +148,8 @@ public sealed record class BlockSyntax(
     SyntaxToken CloseBrace) : ExpressionSyntax
 {
     /// <inheritdoc/>
-    public override Sequence<CommentGroup>? LeadingTrivia => this.OpenBrace.LeadingTrivia;
+    public override Sequence<Token>? LeadingTrivia => this.OpenBrace.LeadingTrivia;
 
     /// <inheritdoc/>
-    public override Sequence<CommentGroup>? TrailingTrivia => this.CloseBrace.TrailingTrivia;
+    public override Sequence<Token>? TrailingTrivia => this.CloseBrace.TrailingTrivia;
 }

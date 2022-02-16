@@ -133,10 +133,27 @@ public enum TokenType
 public static class TokenTypeExtensions
 {
     /// <summary>
-    /// Checks if a given <see cref="TokenType"/>
+    /// Checks if a given <see cref="TokenType"/> is considered comment.
     /// </summary>
-    /// <param name="tokenType"></param>
-    /// <returns></returns>
+    /// <param name="tokenType">The token type to check.</param>
+    /// <returns>True, if <paramref name="tokenType"/> is a comment token type.</returns>
+    public static bool IsComment(this TokenType tokenType) =>
+        tokenType is TokenType.LineComment;
+
+    /// <summary>
+    /// Checks if a given <see cref="TokenType"/> is considered spacing (whitespace or newline).
+    /// </summary>
+    /// <param name="tokenType">The token type to check.</param>
+    /// <returns>True, if <paramref name="tokenType"/> is a spacing token type.</returns>
+    public static bool IsSpacing(this TokenType tokenType) =>
+        tokenType is TokenType.Whitespace
+                  or TokenType.Newline;
+
+    /// <summary>
+    /// Checks if a given <see cref="TokenType"/> is considered trivia.
+    /// </summary>
+    /// <param name="tokenType">The token type to check.</param>
+    /// <returns>True, if <paramref name="tokenType"/> is a trivia token type.</returns>
     public static bool IsTrivia(this TokenType tokenType) =>
         tokenType is TokenType.LineComment
                   or TokenType.Whitespace

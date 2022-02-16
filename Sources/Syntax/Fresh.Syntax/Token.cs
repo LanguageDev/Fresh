@@ -19,6 +19,16 @@ namespace Fresh.Syntax;
 public sealed record class Token(Location Location, TokenType Type, string Text)
 {
     /// <summary>
+    /// True, if this is a spacing token.
+    /// </summary>
+    public bool IsSpacing => this.Type.IsSpacing();
+
+    /// <summary>
+    /// True, if this is a comment token.
+    /// </summary>
+    public bool IsComment => this.Type.IsComment();
+
+    /// <summary>
     /// True, if this is a trivia token.
     /// </summary>
     public bool IsTrivia => this.Type.IsTrivia();

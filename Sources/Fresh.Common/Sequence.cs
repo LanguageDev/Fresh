@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -17,7 +18,7 @@ public readonly record struct Sequence<T>(IReadOnlyList<T> Elements) : IReadOnly
     /// <summary>
     /// An empty sequence.
     /// </summary>
-    public static Sequence<T> Empty { get; } = new(Array.Empty<T>());
+    public static Sequence<T> Empty { get; } = new(ImmutableArray<T>.Empty);
 
     public int Count => this.Elements.Count;
 
