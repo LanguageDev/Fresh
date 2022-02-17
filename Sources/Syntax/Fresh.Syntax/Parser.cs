@@ -25,6 +25,13 @@ public sealed class Parser
         this.tokens = tokenSource;
     }
 
+    private bool TryMatch(TokenType tokenType, [MaybeNullWhen(false)] out SyntaxToken token)
+    {
+        if (!this.TryPeek(0, out token) || token.Type != tokenType) return false;
+        token = this.Take();
+        return true;
+    }
+
     private SyntaxToken Take()
     {
         if (!this.TryPeek(0, out _)) throw new InvalidOperationException($"Could nod take a token");

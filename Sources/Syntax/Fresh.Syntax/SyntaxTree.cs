@@ -28,6 +28,11 @@ public readonly record struct SyntaxToken(
     Token Token,
     Sequence<Token> TrailingTrivia)
 {
+    /// <summary>
+    /// The type of the token.
+    /// </summary>
+    public TokenType Type => this.Token.Type;
+
     public SyntaxToken(Token Token)
         : this(Sequence<Token>.Empty, Token, Sequence<Token>.Empty)
     {
@@ -47,12 +52,34 @@ public abstract record class SyntaxNode
     /// <summary>
     /// The leading trivia of this syntax node.
     /// </summary>
-    public abstract Sequence<Token>? LeadingTrivia { get; }
+    public abstract Sequence<Token> LeadingTrivia { get; }
 
     /// <summary>
     /// The trailing trivia of this syntax node.
     /// </summary>
-    public abstract Sequence<Token>? TrailingTrivia { get; }
+    public abstract Sequence<Token> TrailingTrivia { get; }
+
+    /// <summary>
+    /// Gets the leading trivia from a list of syntax nodes.
+    /// </summary>
+    /// <typeparam name="TSyntax">The type of the syntax nodes.</typeparam>
+    /// <param name="nodes">The list of nodes.</param>
+    /// <returns>The leading trivia of the first element in <paramref name="nodes"/>.</returns>
+    protected static Sequence<Token> GetLeadingTrivia<TSyntax>(IReadOnlyList<TSyntax> nodes)
+        where TSyntax : SyntaxNode => nodes.Count == 0
+        ? Sequence<Token>.Empty
+        : nodes[0].LeadingTrivia;
+
+    /// <summary>
+    /// Gets the trailing trivia from a list of syntax nodes.
+    /// </summary>
+    /// <typeparam name="TSyntax">The type of the syntax nodes.</typeparam>
+    /// <param name="nodes">The list of nodes.</param>
+    /// <returns>The trailing trivia of the last element in <paramref name="nodes"/>.</returns>
+    protected static Sequence<Token> GetTrailingTrivia<TSyntax>(IReadOnlyList<TSyntax> nodes)
+        where TSyntax : SyntaxNode => nodes.Count == 0
+        ? Sequence<Token>.Empty
+        : nodes[^1].TrailingTrivia;
 
     /// <summary>
     /// Utility to read out a doc comment attached right above a token from the <see cref="SyntaxNode.LeadingTrivia"/>.
@@ -62,11 +89,9 @@ public abstract record class SyntaxNode
     protected CommentGroup? GetDocumentationFor(SyntaxToken token)
     {
         // Check if there is any leading trivial
-        if (this.LeadingTrivia is null) return null;
-        var leading = this.LeadingTrivia.Value;
-        if (leading.Count == 0) return null;
+        if (this.LeadingTrivia.Count == 0) return null;
         // Take comments in reverse order
-        var lastComments = leading
+        var lastComments = this.LeadingTrivia
             .Where(t => t.IsComment)
             .Reverse();
         // Take comments while they are strictly stuck together
@@ -94,6 +119,33 @@ public abstract record class StatementSyntax : SyntaxNode;
 /// </summary>
 public abstract record class DeclarationSyntax : StatementSyntax;
 
+public sealed record class FileDeclarationSyntax(
+    IReadOnlyList<DeclarationSyntax> Declarations) : DeclarationSyntax
+{
+    /// <inheritdoc/>
+    public override CommentGroup? Documentation
+    {
+        get
+        {
+            var maxAllowedLine = 0;
+            var comments = new List<Token>();
+            foreach (var comment in this.LeadingTrivia.Where(t => t.IsComment))
+            {
+                if (comment.Location.Start.Line > maxAllowedLine) break;
+                comments.Add(comment);
+                maxAllowedLine = comment.Location.End.Line + 1;
+            }
+            return new(comments.ToSequence());
+        }
+    }
+
+    /// <inheritdoc/>
+    public override Sequence<Token> LeadingTrivia => GetLeadingTrivia(this.Declarations);
+
+    /// <inheritdoc/>
+    public override Sequence<Token> TrailingTrivia => GetTrailingTrivia(this.Declarations);
+}
+
 /// <summary>
 /// A function declaration.
 /// </summary>
@@ -111,10 +163,10 @@ public sealed record class FunctionDeclarationSyntax(
     public override CommentGroup? Documentation => this.GetDocumentationFor(this.FuncKeyword);
 
     /// <inheritdoc/>
-    public override Sequence<Token>? LeadingTrivia => this.FuncKeyword.LeadingTrivia;
+    public override Sequence<Token> LeadingTrivia => this.FuncKeyword.LeadingTrivia;
 
     /// <inheritdoc/>
-    public override Sequence<Token>? TrailingTrivia => this.Body.TrailingTrivia;
+    public override Sequence<Token> TrailingTrivia => this.Body.TrailingTrivia;
 }
 
 /// <summary>
@@ -127,10 +179,10 @@ public sealed record class ArgumentListSyntax(
     SyntaxToken CloseParenthesis) : SyntaxNode
 {
     /// <inheritdoc/>
-    public override Sequence<Token>? LeadingTrivia => this.OpenParenthesis.LeadingTrivia;
+    public override Sequence<Token> LeadingTrivia => this.OpenParenthesis.LeadingTrivia;
 
     /// <inheritdoc/>
-    public override Sequence<Token>? TrailingTrivia => this.CloseParenthesis.TrailingTrivia;
+    public override Sequence<Token> TrailingTrivia => this.CloseParenthesis.TrailingTrivia;
 }
 
 /// <summary>
@@ -148,8 +200,8 @@ public sealed record class BlockSyntax(
     SyntaxToken CloseBrace) : ExpressionSyntax
 {
     /// <inheritdoc/>
-    public override Sequence<Token>? LeadingTrivia => this.OpenBrace.LeadingTrivia;
+    public override Sequence<Token> LeadingTrivia => this.OpenBrace.LeadingTrivia;
 
     /// <inheritdoc/>
-    public override Sequence<Token>? TrailingTrivia => this.CloseBrace.TrailingTrivia;
+    public override Sequence<Token> TrailingTrivia => this.CloseBrace.TrailingTrivia;
 }
