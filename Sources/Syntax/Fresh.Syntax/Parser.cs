@@ -25,6 +25,12 @@ public sealed class Parser
         this.tokens = tokenSource;
     }
 
+    public FileDeclarationSyntax ParseFile()
+    {
+        //while (!this.TryMatch(TokenType.End))
+        throw new NotImplementedException();
+    }
+
     private bool TryMatch(TokenType tokenType, [MaybeNullWhen(false)] out SyntaxToken token)
     {
         if (!this.TryPeek(0, out token) || token.Type != tokenType) return false;

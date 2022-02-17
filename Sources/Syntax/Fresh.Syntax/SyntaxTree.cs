@@ -119,8 +119,14 @@ public abstract record class StatementSyntax : SyntaxNode;
 /// </summary>
 public abstract record class DeclarationSyntax : StatementSyntax;
 
+/// <summary>
+/// A full, parsed file.
+/// </summary>
+/// <param name="Declarations">The declarations in the file.</param>
+/// <param name="End">The end token.</param>
 public sealed record class FileDeclarationSyntax(
-    IReadOnlyList<DeclarationSyntax> Declarations) : DeclarationSyntax
+    IReadOnlyList<DeclarationSyntax> Declarations,
+    SyntaxToken End) : DeclarationSyntax
 {
     /// <inheritdoc/>
     public override CommentGroup? Documentation
@@ -140,10 +146,12 @@ public sealed record class FileDeclarationSyntax(
     }
 
     /// <inheritdoc/>
-    public override Sequence<Token> LeadingTrivia => GetLeadingTrivia(this.Declarations);
+    public override Sequence<Token> LeadingTrivia => this.Declarations.Count == 0
+        ? this.End.LeadingTrivia
+        : this.Declarations[0].LeadingTrivia;
 
     /// <inheritdoc/>
-    public override Sequence<Token> TrailingTrivia => GetTrailingTrivia(this.Declarations);
+    public override Sequence<Token> TrailingTrivia => this.End.TrailingTrivia;
 }
 
 /// <summary>
