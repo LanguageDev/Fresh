@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
@@ -17,6 +18,12 @@ namespace Fresh.Syntax;
 /// </summary>
 public sealed class Parser
 {
+    public static FileDeclarationSyntax Parse(IEnumerable<SyntaxToken> tokens)
+    {
+        var parser = new Parser(tokens.GetEnumerator());
+        return parser.ParseFileDeclaration();
+    }
+
     private readonly IEnumerator<SyntaxToken> tokens;
     private readonly RingBuffer<SyntaxToken> peekBuffer = new();
 
@@ -25,10 +32,66 @@ public sealed class Parser
         this.tokens = tokenSource;
     }
 
-    public FileDeclarationSyntax ParseFile()
+    public FileDeclarationSyntax ParseFileDeclaration()
     {
-        //while (!this.TryMatch(TokenType.End))
-        throw new NotImplementedException();
+        var declarations = new List<DeclarationSyntax>();
+        SyntaxToken end;
+        while (!this.TryMatch(TokenType.End, out end))
+        {
+            declarations.Add(this.ParseDeclaration());
+        }
+        return new(declarations.ToSequence(), end);
+    }
+
+    private DeclarationSyntax ParseDeclaration()
+    {
+        Debug.Assert(this.TryPeek(0, out var head));
+        return head.Token.Type switch
+        {
+            TokenType.KeywordFunc => this.ParseFunctionDeclaration(),
+            // TODO: Handle proper errors
+            _ => throw new NotImplementedException(),
+        };
+    }
+
+    private FunctionDeclarationSyntax ParseFunctionDeclaration()
+    {
+        var funcKw = this.Take();
+        Debug.Assert(funcKw.Type == TokenType.KeywordFunc);
+        // TODO: Handle proper errors
+        if (!this.TryMatch(TokenType.Identifier, out var name)) throw new NotImplementedException();
+        var paramList = this.ParseParameterList();
+        var body = this.ParseExpression();
+        return new(funcKw, name, paramList, body);
+    }
+
+    private ParameterListSyntax ParseParameterList()
+    {
+        // TODO: Handle proper errors
+        if (!this.TryMatch(TokenType.OpenParenthesis, out var openParen)) throw new NotImplementedException();
+        // TODO: Handle proper errors
+        if (!this.TryMatch(TokenType.CloseParenthesis, out var closeParen)) throw new NotImplementedException();
+        return new(openParen, closeParen);
+    }
+
+    private ExpressionSyntax ParseExpression()
+    {
+        Debug.Assert(this.TryPeek(0, out var head));
+        return head.Token.Type switch
+        {
+            TokenType.OpenBrace => this.ParseBlockExpression(),
+            // TODO: Handle proper errors
+            _ => throw new NotImplementedException(),
+        };
+    }
+
+    private BlockExpressionSyntax ParseBlockExpression()
+    {
+        var openBrace = this.Take();
+        Debug.Assert(openBrace.Type == TokenType.OpenBrace);
+        // TODO: Handle proper errors
+        if (!this.TryMatch(TokenType.CloseBrace, out var closeBrace)) throw new NotImplementedException();
+        return new(openBrace, closeBrace);
     }
 
     private bool TryMatch(TokenType tokenType, [MaybeNullWhen(false)] out SyntaxToken token)

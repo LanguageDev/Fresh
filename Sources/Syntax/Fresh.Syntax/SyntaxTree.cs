@@ -159,12 +159,12 @@ public sealed record class FileDeclarationSyntax(
 /// </summary>
 /// <param name="FuncKeyword">The keyword starting the declaration.</param>
 /// <param name="Name">The name of the function.</param>
-/// <param name="ArgumentList">The argument list syntax.</param>
+/// <param name="ParameterList">The parameter list syntax.</param>
 /// <param name="Body">The body of the function.</param>
 public sealed record class FunctionDeclarationSyntax(
     SyntaxToken FuncKeyword,
     SyntaxToken Name,
-    ArgumentListSyntax ArgumentList,
+    ParameterListSyntax ParameterList,
     ExpressionSyntax Body) : DeclarationSyntax
 {
     /// <inheritdoc/>
@@ -178,11 +178,11 @@ public sealed record class FunctionDeclarationSyntax(
 }
 
 /// <summary>
-/// An argument list for a function.
+/// A parameter list for a function declaration.
 /// </summary>
 /// <param name="OpenParenthesis">The open parenthesis.</param>
 /// <param name="CloseParenthesis">The close parenthesis.</param>
-public sealed record class ArgumentListSyntax(
+public sealed record class ParameterListSyntax(
     SyntaxToken OpenParenthesis,
     SyntaxToken CloseParenthesis) : SyntaxNode
 {
@@ -203,7 +203,7 @@ public abstract record class ExpressionSyntax : SyntaxNode;
 /// </summary>
 /// <param name="OpenBrace">The open brace.</param>
 /// <param name="CloseBrace">The close brace.</param>
-public sealed record class BlockSyntax(
+public sealed record class BlockExpressionSyntax(
     SyntaxToken OpenBrace,
     SyntaxToken CloseBrace) : ExpressionSyntax
 {

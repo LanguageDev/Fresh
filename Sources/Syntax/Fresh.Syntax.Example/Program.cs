@@ -7,35 +7,32 @@ internal class Program
 {
     public static void Main(string[] args)
     {
-        var source = @"
-// This is sticky
-// To func
-func foo() {
+        var source =
+@"// File documentation comment
+// Starts from the first line comment
+// And comments stick together!
 
-    // hello func foo
-    var a 0; // This goes to semicolon
-    @
+// This is a function
+// With doc comment
+func foo() {
+    // And this is a comment inside
 }
-// This goes to the close brace
 ";
         var sourceText = SourceText.FromString("foo.fresh", source);
         var tokens = Lexer.Lex(sourceText);
         var syntaxTokens = SyntaxTokenStream.Process(tokens);
-        foreach (var t in syntaxTokens)
-        {
-            Console.WriteLine("{");
-            Console.WriteLine("  Leading trivia:");
-            foreach (var l in t.LeadingTrivia) Console.WriteLine($"    {StringifyToken(l)}");
-            Console.WriteLine($"  Token: {StringifyToken(t.Token)}");
-            Console.WriteLine("  Trailing trivia:");
-            foreach (var l in t.TrailingTrivia) Console.WriteLine($"    {StringifyToken(l)}");
-            Console.WriteLine("}");
-        }
+        var tree = Parser.Parse(syntaxTokens);
+        Console.WriteLine(PrintNode(tree));
     }
 
-    private static string StringifyToken(Token token) =>
-        $"{token.Type} - '{token.Text}' ({StringifyPosition(token.Location.Range.Start)})-({StringifyPosition(token.Location.Range.End)})";
+    private static string PrintNode(SyntaxNode n) => n switch
+    {
+        FileDeclarationSyntax s => $"{string.Join("", s.Declarations.Select(PrintNode))}{PrintToken(s.End)}",
+        FunctionDeclarationSyntax f => $"{PrintToken(f.FuncKeyword)}{PrintToken(f.Name)}{PrintNode(f.ParameterList)}{PrintNode(f.Body)}",
+        ParameterListSyntax p => $"{PrintToken(p.OpenParenthesis)}{PrintToken(p.CloseParenthesis)}",
+        BlockExpressionSyntax b => $"{PrintToken(b.OpenBrace)}{PrintToken(b.CloseBrace)}",
+    };
 
-    private static string StringifyPosition(Position position) =>
-        $"line: {position.Line} column: {position.Column}";
+    private static string PrintToken(SyntaxToken t) =>
+        $"{string.Join("", t.LeadingTrivia.Select(t => t.Text))}{t.Token.Text}{string.Join("", t.TrailingTrivia.Select(t => t.Text))}";
 }
