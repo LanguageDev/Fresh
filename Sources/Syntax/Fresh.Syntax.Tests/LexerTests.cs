@@ -16,6 +16,27 @@ public sealed class LexerTests
     public static IEnumerable<object[]> LexedTokens => new List<object[]>
     {
         new object[] { "", MakeToken(TokenType.End, "", "0:0:0-0:0:0") },
+        new object[]
+        {
+            "   ",
+            MakeToken(TokenType.Whitespace, "   ", "0:0:0-0:3:3"),
+            MakeToken(TokenType.End, "", "0:3:3-0:3:3"),
+        },
+        new object[]
+        {
+            "foo \nbar  \rbaz \t \r\n ",
+            MakeToken(TokenType.Identifier, "foo", "0:0:0-0:3:3"),
+            MakeToken(TokenType.Whitespace, " ", "0:3:3-0:4:4"),
+            MakeToken(TokenType.Newline, "\n", "0:4:4-1:0:5"),
+            MakeToken(TokenType.Identifier, "bar", "1:0:5-1:3:8"),
+            MakeToken(TokenType.Whitespace, "  ", "1:3:8-1:5:10"),
+            MakeToken(TokenType.Newline, "\r", "1:5:10-2:0:11"),
+            MakeToken(TokenType.Identifier, "baz", "2:0:11-2:3:14"),
+            MakeToken(TokenType.Whitespace, " \t ", "2:3:14-2:6:17"),
+            MakeToken(TokenType.Newline, "\r\n", "2:6:17-3:0:19"),
+            MakeToken(TokenType.Whitespace, " ", "3:0:19-3:1:20"),
+            MakeToken(TokenType.End, "", "3:1:20-3:1:20"),
+        },
     };
 
     private static SourceText emptySource = SourceText.FromString(string.Empty, string.Empty);
@@ -35,10 +56,12 @@ public sealed class LexerTests
     }
 
     // NOTE: We ignore location
-    private static bool TokenEquals(Token t1, Token t2) =>
-           t1.Location.Range == t2.Location.Range
-        && t1.Text == t2.Text
-        && t1.Type == t2.Type;
+    private static void AssertTokenEquals(Token expected, Token got)
+    {
+        Assert.Equal(expected.Location.Range, got.Location.Range);
+        Assert.Equal(expected.Text, got.Text);
+        Assert.Equal(expected.Type, got.Type);
+    }
 
     [MemberData(nameof(LexedTokens))]
     [Theory]
@@ -46,6 +69,6 @@ public sealed class LexerTests
     {
         var got = Lexer.Lex(SourceText.FromString("", input)).ToList();
         Assert.Equal(expected.Length, got.Count);
-        for (var i = 0; i < got.Count; ++i) Assert.True(TokenEquals(expected[i], got[i]));
+        for (var i = 0; i < got.Count; ++i) AssertTokenEquals(expected[i], got[i]);
     }
 }
