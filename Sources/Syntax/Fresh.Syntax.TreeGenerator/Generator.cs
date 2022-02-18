@@ -87,14 +87,14 @@ public sealed class Generator
             this.codeBuilder.AppendLine("    /// <summary>");
             this.codeBuilder.AppendLine($"    /// Initializes a new instance of the <see cref=\"{node.Name}\"/> class.");
             this.codeBuilder.AppendLine("    /// </summary>");
-            foreach (var field in node.Fields) this.codeBuilder.AppendLine($"    /// <param name=\"{field.Name}\">{field.Doc}</param>");
+            foreach (var field in node.Fields) this.codeBuilder.AppendLine($"    /// <param name=\"{ToCamelCase(field.Name)}\">{field.Doc}</param>");
 
             // Ctot itself
             this.codeBuilder.Append($"    public {node.Name}(");
-            this.codeBuilder.AppendJoin(", ", node.Fields.Select(f => $"{f.Type} {f.Name}"));
+            this.codeBuilder.AppendJoin(", ", node.Fields.Select(f => $"{f.Type} {ToCamelCase(f.Name)}"));
             this.codeBuilder.AppendLine(")");
             this.codeBuilder.AppendLine("    {");
-            foreach (var field in node.Fields) this.codeBuilder.AppendLine($"        this.{field.Name} = {field.Name};");
+            foreach (var field in node.Fields) this.codeBuilder.AppendLine($"        this.{field.Name} = {ToCamelCase(field.Name)};");
             this.codeBuilder.AppendLine("    }");
         }
 
@@ -128,12 +128,14 @@ public sealed class Generator
         this.codeBuilder.AppendLine("    /// <summary>");
         this.codeBuilder.AppendLine($"    /// Constructs a <see cref=\"{node.Name}\"/> from the given arguments.");
         this.codeBuilder.AppendLine("    /// </summary>");
-        foreach (var field in node.Fields) this.codeBuilder.AppendLine($"    /// <param name=\"{field.Name}\">{field.Doc}</param>");
+        foreach (var field in node.Fields) this.codeBuilder.AppendLine($"    /// <param name=\"{ToCamelCase(field.Name)}\">{field.Doc}</param>");
         this.codeBuilder.Append($"    public static {node.Name} {methodName}(");
-        this.codeBuilder.AppendJoin(", ", node.Fields.Select(f => $"{f.Type} {f.Name}"));
+        this.codeBuilder.AppendJoin(", ", node.Fields.Select(f => $"{f.Type} {ToCamelCase(f.Name)}"));
         this.codeBuilder.AppendLine(") =>");
         this.codeBuilder.Append($"        new {node.Name}(");
-        this.codeBuilder.AppendJoin(", ", node.Fields.Select(f => f.Name));
+        this.codeBuilder.AppendJoin(", ", node.Fields.Select(f => ToCamelCase(f.Name)));
         this.codeBuilder.AppendLine(");");
     }
+
+    private static string ToCamelCase(string name) => $"{char.ToLower(name[0])}{name[1..]}";
 }
