@@ -128,6 +128,12 @@ public sealed class Generator
         this.codeBuilder.AppendLine("    /// <summary>");
         this.codeBuilder.AppendLine($"    /// Constructs a <see cref=\"{node.Name}\"/> from the given arguments.");
         this.codeBuilder.AppendLine("    /// </summary>");
-        this.codeBuilder.AppendLine($"    public static {node.Name} {methodName}() => throw new NotImplementedException();");
+        foreach (var field in node.Fields) this.codeBuilder.AppendLine($"    /// <param name=\"{field.Name}\">{field.Doc}</param>");
+        this.codeBuilder.Append($"    public static {node.Name} {methodName}(");
+        this.codeBuilder.AppendJoin(", ", node.Fields.Select(f => $"{f.Type} {f.Name}"));
+        this.codeBuilder.AppendLine(") =>");
+        this.codeBuilder.Append($"        new {node.Name}(");
+        this.codeBuilder.AppendJoin(", ", node.Fields.Select(f => f.Name));
+        this.codeBuilder.AppendLine(");");
     }
 }
