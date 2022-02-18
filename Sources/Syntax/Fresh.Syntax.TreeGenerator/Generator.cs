@@ -122,10 +122,10 @@ public sealed class Generator
             foreach (var field in node.Fields)
             {
                 this.codeBuilder.Append($"        this.{field.Name}");
-                if (!ReferenceEquals(field, node.Fields[^1])) this.codeBuilder.Append(',');
+                if (ReferenceEquals(field, node.Fields[^1])) this.codeBuilder.Append(");");
+                else this.codeBuilder.Append(',');
                 this.codeBuilder.AppendLine();
             }
-            this.codeBuilder.AppendLine("    );");
         }
 
         this.codeBuilder.AppendLine("}");
@@ -135,7 +135,7 @@ public sealed class Generator
     private void GenerateFactory()
     {
         this.codeBuilder.AppendLine("/// <summary>");
-        this.codeBuilder.AppendLine($"/// Provides factory methods for the syntax nodes.");
+        this.codeBuilder.AppendLine("/// Provides factory methods for the syntax nodes.");
         this.codeBuilder.AppendLine("/// </summary>");
         this.codeBuilder.AppendLine($"public static partial class {this.tree.Factory}");
         this.codeBuilder.AppendLine("{");
