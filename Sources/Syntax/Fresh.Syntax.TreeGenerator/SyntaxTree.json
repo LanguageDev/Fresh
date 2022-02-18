@@ -1,0 +1,109 @@
+{
+  "usings": [
+    "System",
+    "System.Collections.Generic",
+    "System.Linq",
+    "System.Text"
+  ],
+  "namespace": "Fresh.Syntax",
+  "factory": "SyntaxFactory",
+  "root": "SyntaxNode",
+  "nodes": [
+    {
+      "name": "StatementSyntax",
+      "doc": "The base for all statement syntax nodes.",
+      "base": "SyntaxNode",
+      "isAbstract": true
+    },
+    {
+      "name": "ExpressionSyntax",
+      "doc": "The base for all expression syntax nodes.",
+      "base": "SyntaxNode",
+      "isAbstract": true
+    },
+    {
+      "name": "DeclarationSyntax",
+      "doc": "The base for all declaration syntax nodes.",
+      "base": "StatementSyntax",
+      "isAbstract": true
+    },
+    {
+      "name": "FileDeclarationSyntax",
+      "doc": "A full, parsed file containing all of its declarations.",
+      "base": "DeclarationSyntax",
+      "fields": [
+        {
+          "name": "Declarations",
+          "type": "Sequence<DeclarationSyntax>",
+          "doc": "The declarations contained in the file."
+        },
+        {
+          "name": "End",
+          "type": "SyntaxToken",
+          "doc": "The end of file token."
+        }
+      ]
+    },
+    {
+      "name": "FunctionDeclarationSyntax",
+      "doc": "A function declaration.",
+      "base": "DeclarationSyntax",
+      "fields": [
+        {
+          "name": "FuncKeyword",
+          "type": "SyntaxToken",
+          "doc": "The function keyword."
+        },
+        {
+          "name": "Name",
+          "type": "SyntaxToken",
+          "doc": "The name of the function."
+        },
+        {
+          "name": "ParameterList",
+          "type": "ParameterListSyntax",
+          "doc": "The parameters of the function."
+        },
+        {
+          "name": "Body",
+          "type": "ExpressionSyntax",
+          "doc": "The body of the function."
+        }
+      ]
+    },
+    {
+      "name": "ParameterListSyntax",
+      "doc": "A list of parameters for a function declaration.",
+      "base": "SyntaxNode",
+      "fields": [
+        {
+          "name": "OpenParenthesis",
+          "type": "SyntaxToken",
+          "doc": "The open parenthesis token."
+        },
+        {
+          "name": "CloseParenthesis",
+          "type": "SyntaxToken",
+          "doc": "The close parenthesis token."
+        }
+      ]
+    },
+    {
+      "name": "BlockExpressionSyntax",
+      "doc": "A code block expression.",
+      "base": "ExpressionSyntax",
+      "fields": [
+        {
+          "name": "OpenBrace",
+          "type": "SyntaxToken",
+          "doc": "The open brace token."
+        },
+        {
+          "name": "CloseBrace",
+          "type": "SyntaxToken",
+          "doc": "The close brace token."
+        }
+      ]
+    }
+  ]
+}
