@@ -58,6 +58,46 @@ public sealed class Generator
         }
         this.codeBuilder.AppendLine($"public {extModifier} partial class {node.Name}{baseModifier}");
         this.codeBuilder.AppendLine("{");
+
+        // Properties
+        foreach (var field in node.Fields)
+        {
+            // Hack to add spacing inbetween
+            if (!ReferenceEquals(field, node.Fields[0])) this.codeBuilder.AppendLine();
+
+            // Doc comment
+            if (field.Doc is not null)
+            {
+                this.codeBuilder.AppendLine("    /// <summary>");
+                this.codeBuilder.AppendLine($"    /// {field.Doc}");
+                this.codeBuilder.AppendLine("    /// </summary>");
+            }
+
+            // Property itself
+            this.codeBuilder.AppendLine($"    public {field.Type} {field.Name} {{ get; }}");
+        }
+
+        // Constructor
+        if (!node.IsAbstract && node.Fields.Length > 0)
+        {
+            // Separator between property and ctor
+            this.codeBuilder.AppendLine();
+
+            // Doc comment
+            this.codeBuilder.AppendLine("    /// <summary>");
+            this.codeBuilder.AppendLine($"    /// Initializes a new instance of the <see cref=\"{node.Name}\"/> class.");
+            this.codeBuilder.AppendLine("    /// </summary>");
+            foreach (var field in node.Fields) this.codeBuilder.AppendLine($"    /// <param name=\"{field.Name}\">{field.Doc}</param>");
+
+            // Ctot itself
+            this.codeBuilder.Append($"    public {node.Name}(");
+            this.codeBuilder.AppendJoin(", ", node.Fields.Select(f => $"{f.Type} {f.Name}"));
+            this.codeBuilder.AppendLine(")");
+            this.codeBuilder.AppendLine("    {");
+            foreach (var field in node.Fields) this.codeBuilder.AppendLine($"        this.{field.Name} = {field.Name};");
+            this.codeBuilder.AppendLine("    }");
+        }
+
         this.codeBuilder.AppendLine("}");
         this.codeBuilder.AppendLine();
     }
@@ -69,6 +109,25 @@ public sealed class Generator
         this.codeBuilder.AppendLine("/// </summary>");
         this.codeBuilder.AppendLine($"public static partial class {this.tree.Factory}");
         this.codeBuilder.AppendLine("{");
+        foreach (var node in this.tree.Nodes) this.GenerateFactory(node);
         this.codeBuilder.AppendLine("}");
+    }
+
+    private void GenerateFactory(NodeModel node)
+    {
+        // Skip abstract nodes
+        if (node.IsAbstract) return;
+
+        // A hack to leave a line between the methods
+        if (!ReferenceEquals(node, this.tree.Nodes.First(n => !n.IsAbstract))) this.codeBuilder.AppendLine();
+
+        // We infer a nice method name
+        var methodName = node.Name;
+        if (methodName.EndsWith("Syntax")) methodName = methodName[..^6];
+
+        this.codeBuilder.AppendLine("    /// <summary>");
+        this.codeBuilder.AppendLine($"    /// Constructs a <see cref=\"{node.Name}\"/> from the given arguments.");
+        this.codeBuilder.AppendLine("    /// </summary>");
+        this.codeBuilder.AppendLine($"    public static {node.Name} {methodName}() => throw new NotImplementedException();");
     }
 }
