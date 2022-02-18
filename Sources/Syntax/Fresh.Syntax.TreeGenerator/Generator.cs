@@ -98,6 +98,36 @@ public sealed class Generator
             this.codeBuilder.AppendLine("    }");
         }
 
+        // Equality and hash
+        if (!node.IsAbstract)
+        {
+            if (node.Fields.Length > 0) this.codeBuilder.AppendLine();
+
+            // Equality
+            this.codeBuilder.AppendLine("    /// <inheritdoc/>");
+            this.codeBuilder.AppendLine($"    public override bool Equals({this.tree.Root}? other) =>");
+            this.codeBuilder.AppendLine($"           other is {node.Name} o");
+            foreach (var field in node.Fields)
+            {
+                this.codeBuilder.Append($"        && this.{field.Name}.Equals(o.{field.Name})");
+                if (ReferenceEquals(field, node.Fields[^1])) this.codeBuilder.Append(';');
+                this.codeBuilder.AppendLine();
+            }
+
+            this.codeBuilder.AppendLine();
+
+            // Hash
+            this.codeBuilder.AppendLine("    /// <inheritdoc/>");
+            this.codeBuilder.AppendLine("    public override int GetHashCode() => HashCode.Combine(");
+            foreach (var field in node.Fields)
+            {
+                this.codeBuilder.Append($"        this.{field.Name}");
+                if (!ReferenceEquals(field, node.Fields[^1])) this.codeBuilder.Append(',');
+                this.codeBuilder.AppendLine();
+            }
+            this.codeBuilder.AppendLine("    );");
+        }
+
         this.codeBuilder.AppendLine("}");
         this.codeBuilder.AppendLine();
     }
