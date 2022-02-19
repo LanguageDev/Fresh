@@ -19,6 +19,8 @@ public sealed class Generator
         return generator.codeBuilder.ToString();
     }
 
+    private const int indentSize = 2;
+
     private readonly StringBuilder codeBuilder = new();
     private readonly TreeModel tree;
     private readonly Dictionary<string, NodeModel> nodes;
@@ -98,7 +100,7 @@ public sealed class Generator
             this.codeBuilder.AppendLine("    }");
         }
 
-        // Equality and hash
+        // Equality and hash, ToString
         if (!node.IsAbstract)
         {
             if (node.Fields.Length > 0) this.codeBuilder.AppendLine();
@@ -126,6 +128,34 @@ public sealed class Generator
                 else this.codeBuilder.Append(',');
                 this.codeBuilder.AppendLine();
             }
+
+            this.codeBuilder.AppendLine();
+
+            // ToString
+            this.codeBuilder.AppendLine("    /// <inheritdoc/>");
+            this.codeBuilder.AppendLine("    protected override string ToString(StringBuilder builder, int indent)");
+            this.codeBuilder.AppendLine("    {");
+            // Print name + opening brace for this node
+            this.codeBuilder.AppendLine($"        builder.AppendLine(\"{node.Name} {{\");");
+            // Print the leading trivia
+            this.codeBuilder.AppendLine($"        builder.Append(' ', (indent + 1) * {indentSize});");
+            this.codeBuilder.AppendLine("        builder.Append(\"LeadingTrivia: \");");
+            this.codeBuilder.AppendLine("        builder.AppendLine(this.LeadingTrivia);");
+            // Print fields
+            foreach (var field in node.Fields)
+            {
+                this.codeBuilder.AppendLine($"        builder.Append(' ', indent * {indentSize});");
+                this.codeBuilder.AppendLine($"        builder.Append(\"{field.Name}: \");");
+                this.codeBuilder.AppendLine($"        this.{field.Name}.ToString(builder, indent + 1);");
+            }
+            // Print the trailing trivia
+            this.codeBuilder.AppendLine($"        builder.Append(' ', (indent + 1) * {indentSize});");
+            this.codeBuilder.AppendLine("        builder.Append(\"TrailingTrivia: \");");
+            this.codeBuilder.AppendLine("        builder.AppendLine(this.TrailingTrivia);");
+            // Closing brace
+            this.codeBuilder.AppendLine($"        builder.Append(' ', indent * {indentSize});");
+            this.codeBuilder.AppendLine("        builder.AppendLine(\"}\");");
+            this.codeBuilder.AppendLine("    }");
         }
 
         this.codeBuilder.AppendLine("}");
