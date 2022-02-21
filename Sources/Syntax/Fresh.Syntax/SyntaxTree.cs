@@ -5,6 +5,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using Fresh.Common;
@@ -98,12 +99,54 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
 
     private const int indentSize = 2;
 
-    /// <inheritdoc/>
-    public override string ToString()
+    /// <summary>
+    /// Converts the syntax tree to source code.
+    /// </summary>
+    /// <returns>The source code that this syntax tree represents.</returns>
+    public string ToSourceText()
+    {
+        var writer = new StringWriter();
+        this.WriteSourceText(writer);
+        return writer.ToString();
+    }
+
+    /// <summary>
+    /// Writes the syntax tree as source code to a writer.
+    /// </summary>
+    /// <param name="writer">The writer to write the tree to.</param>
+    public void WriteSourceText(TextWriter writer) => WriteSourceTextImpl(writer, this);
+
+    /// <summary>
+    /// Creates a debug representation of the syntax tree.
+    /// </summary>
+    /// <returns>The debug representation of the syntax tree.</returns>
+    public string ToDebugString()
     {
         var builder = new StringBuilder();
         DebugPrint(builder, 0, null, this);
         return builder.ToString();
+    }
+
+    private static void WriteSourceTextImpl(TextWriter writer, object? value)
+    {
+        switch (value)
+        {
+        case ISyntaxElement syntaxElement:
+            foreach (var (_, child) in syntaxElement.Children) WriteSourceTextImpl(writer, child);
+            break;
+
+        case IEnumerable enumerable:
+            foreach (var item in enumerable) WriteSourceTextImpl(writer, item);
+            break;
+
+        case Token token:
+            writer.Write(token.Text);
+            break;
+
+        default:
+            writer.Write(value);
+            break;
+        }
     }
 
     private static void DebugPrint(StringBuilder builder, int indent, string? name, object? value)

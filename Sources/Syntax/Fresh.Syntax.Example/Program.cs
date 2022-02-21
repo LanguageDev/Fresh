@@ -1,5 +1,6 @@
 
 using System;
+using System.IO;
 using System.Linq;
 using Fresh.Syntax;
 
@@ -22,7 +23,8 @@ func foo() {
         var tokens = Lexer.Lex(sourceText);
         var syntaxTokens = SyntaxTokenStream.Process(tokens);
         var tree = Parser.Parse(syntaxTokens);
-        Console.WriteLine(tree.ToString());
+        Console.WriteLine(tree.ToDebugString());
+        Console.WriteLine(tree.ToSourceText());
     }
 
     private static string PrintNode(SyntaxNode n) => n switch
