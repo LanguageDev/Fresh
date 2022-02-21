@@ -37,6 +37,8 @@ public sealed class Generator
         foreach (var u in this.tree.Usings) this.codeBuilder.AppendLine($"using {u};");
         if (this.tree.Usings.Length > 0) this.codeBuilder.AppendLine();
 
+        this.codeBuilder.AppendLine("#nullable enable").AppendLine();
+
         // Emit file-scoped namespace declaration, if one is specified
         if (this.tree.Namespace is not null) this.codeBuilder.AppendLine($"namespace {this.tree.Namespace};").AppendLine();
 
@@ -45,6 +47,11 @@ public sealed class Generator
 
         // Emit factory definition
         if (this.tree.Factory is not null) this.GenerateFactory();
+
+        // Emit extensions
+        this.GenerateSyntaxNodeExtensions();
+
+        this.codeBuilder.AppendLine().AppendLine("#nullable restore").AppendLine();
     }
 
     private void GenerateClass(NodeModel node)
@@ -62,13 +69,19 @@ public sealed class Generator
         this.codeBuilder.AppendLine("{");
 
         // Properties
-        foreach (var field in node.Fields)
+        var first = true;
+        foreach (var field in WithTrivia(node.Fields))
         {
             // Hack to add spacing inbetween
-            if (!ReferenceEquals(field, node.Fields[0])) this.codeBuilder.AppendLine();
+            if (!first) this.codeBuilder.AppendLine();
+            first = false;
 
             // Doc comment
-            if (field.Doc is not null)
+            if (field.Override)
+            {
+                this.codeBuilder.AppendLine("    /// <inheritdoc/>");
+            }
+            else if (field.Doc is not null)
             {
                 this.codeBuilder.AppendLine("    /// <summary>");
                 this.codeBuilder.AppendLine($"    /// {field.Doc}");
@@ -76,7 +89,8 @@ public sealed class Generator
             }
 
             // Property itself
-            this.codeBuilder.AppendLine($"    public {field.Type} {field.Name} {{ get; }}");
+            var overrideSpec = field.Override ? "override " : string.Empty;
+            this.codeBuilder.AppendLine($"    public {overrideSpec}{field.Type} {field.Name} {{ get; }}");
         }
 
         // Constructor
@@ -89,30 +103,40 @@ public sealed class Generator
             this.codeBuilder.AppendLine("    /// <summary>");
             this.codeBuilder.AppendLine($"    /// Initializes a new instance of the <see cref=\"{node.Name}\"/> class.");
             this.codeBuilder.AppendLine("    /// </summary>");
-            foreach (var field in node.Fields) this.codeBuilder.AppendLine($"    /// <param name=\"{ToCamelCase(field.Name)}\">{field.Doc}</param>");
+            foreach (var field in WithTrivia(node.Fields))
+            {
+                this.codeBuilder.AppendLine($"    /// <param name=\"{ToCamelCase(field.Name)}\">{field.Doc}</param>");
+            }
 
             // Ctot itself
-            this.codeBuilder.Append($"    public {node.Name}(");
-            this.codeBuilder.AppendJoin(", ", node.Fields.Select(f => $"{f.Type} {ToCamelCase(f.Name)}"));
-            this.codeBuilder.AppendLine(")");
+            this.codeBuilder.AppendLine($"    internal {node.Name}(");
+            foreach (var field in WithTrivia(node.Fields))
+            {
+                this.codeBuilder.Append($"        {field.Type} {ToCamelCase(field.Name)}");
+                if (field.Name == "TrailingTrivia") this.codeBuilder.AppendLine(")");
+                else this.codeBuilder.AppendLine(",");
+            }
             this.codeBuilder.AppendLine("    {");
-            foreach (var field in node.Fields) this.codeBuilder.AppendLine($"        this.{field.Name} = {ToCamelCase(field.Name)};");
+            foreach (var field in WithTrivia(node.Fields))
+            {
+                this.codeBuilder.AppendLine($"        this.{field.Name} = {ToCamelCase(field.Name)};");
+            }
             this.codeBuilder.AppendLine("    }");
         }
 
-        // Equality and hash, ToString
+        // Equals, GetHashCode, Children
         if (!node.IsAbstract)
         {
-            if (node.Fields.Length > 0) this.codeBuilder.AppendLine();
+            this.codeBuilder.AppendLine();
 
             // Equality
             this.codeBuilder.AppendLine("    /// <inheritdoc/>");
             this.codeBuilder.AppendLine($"    public override bool Equals({this.tree.Root}? other) =>");
             this.codeBuilder.AppendLine($"           other is {node.Name} o");
-            foreach (var field in node.Fields)
+            foreach (var field in WithTrivia(node.Fields))
             {
                 this.codeBuilder.Append($"        && this.{field.Name}.Equals(o.{field.Name})");
-                if (ReferenceEquals(field, node.Fields[^1])) this.codeBuilder.Append(';');
+                if (field.Name == "TrailingTrivia") this.codeBuilder.Append(';');
                 this.codeBuilder.AppendLine();
             }
 
@@ -121,40 +145,27 @@ public sealed class Generator
             // Hash
             this.codeBuilder.AppendLine("    /// <inheritdoc/>");
             this.codeBuilder.AppendLine("    public override int GetHashCode() => HashCode.Combine(");
-            foreach (var field in node.Fields)
+            foreach (var field in WithTrivia(node.Fields))
             {
                 this.codeBuilder.Append($"        this.{field.Name}");
-                if (ReferenceEquals(field, node.Fields[^1])) this.codeBuilder.Append(");");
+                if (field.Name == "TrailingTrivia") this.codeBuilder.Append(");");
                 else this.codeBuilder.Append(',');
                 this.codeBuilder.AppendLine();
             }
 
             this.codeBuilder.AppendLine();
 
-            // ToString
+            // Children
             this.codeBuilder.AppendLine("    /// <inheritdoc/>");
-            this.codeBuilder.AppendLine("    protected override string ToString(StringBuilder builder, int indent)");
+            this.codeBuilder.AppendLine("    public override IEnumerable<KeyValuePair<string, object?>> Children");
             this.codeBuilder.AppendLine("    {");
-            // Print name + opening brace for this node
-            this.codeBuilder.AppendLine($"        builder.AppendLine(\"{node.Name} {{\");");
-            // Print the leading trivia
-            this.codeBuilder.AppendLine($"        builder.Append(' ', (indent + 1) * {indentSize});");
-            this.codeBuilder.AppendLine("        builder.Append(\"LeadingTrivia: \");");
-            this.codeBuilder.AppendLine("        builder.AppendLine(this.LeadingTrivia);");
-            // Print fields
-            foreach (var field in node.Fields)
+            this.codeBuilder.AppendLine("        get");
+            this.codeBuilder.AppendLine("        {");
+            foreach (var field in WithTrivia(node.Fields))
             {
-                this.codeBuilder.AppendLine($"        builder.Append(' ', indent * {indentSize});");
-                this.codeBuilder.AppendLine($"        builder.Append(\"{field.Name}: \");");
-                this.codeBuilder.AppendLine($"        this.{field.Name}.ToString(builder, indent + 1);");
+                this.codeBuilder.AppendLine($"            yield return new(\"{field.Name}\", this.{field.Name});");
             }
-            // Print the trailing trivia
-            this.codeBuilder.AppendLine($"        builder.Append(' ', (indent + 1) * {indentSize});");
-            this.codeBuilder.AppendLine("        builder.Append(\"TrailingTrivia: \");");
-            this.codeBuilder.AppendLine("        builder.AppendLine(this.TrailingTrivia);");
-            // Closing brace
-            this.codeBuilder.AppendLine($"        builder.Append(' ', indent * {indentSize});");
-            this.codeBuilder.AppendLine("        builder.AppendLine(\"}\");");
+            this.codeBuilder.AppendLine("        }");
             this.codeBuilder.AppendLine("    }");
         }
 
@@ -196,13 +207,58 @@ public sealed class Generator
             if (ReferenceEquals(field, node.Fields[^1])) this.codeBuilder.AppendLine($") => new {node.Name}(");
             else this.codeBuilder.AppendLine(",");
         }
-        foreach (var field in node.Fields)
+        var first = true;
+        foreach (var field in WithEmptyTrivia(node.Fields))
         {
-            this.codeBuilder.Append($"        {ToCamelCase(field.Name)}");
-            if (ReferenceEquals(field, node.Fields[^1])) this.codeBuilder.AppendLine(");");
+            this.codeBuilder.Append($"        {field}");
+            if (!first && field == "Sequence<Token>.Empty") this.codeBuilder.AppendLine(");");
             else this.codeBuilder.AppendLine(",");
+            first = false;
         }
     }
 
+    private void GenerateSyntaxNodeExtensions()
+    {
+        this.codeBuilder.AppendLine("/// <summary>");
+        this.codeBuilder.AppendLine("/// Provides extension methods for the syntax nodes.");
+        this.codeBuilder.AppendLine("/// </summary>");
+        this.codeBuilder.AppendLine($"public static partial class {this.tree.Root}Extensions");
+        this.codeBuilder.AppendLine("{");
+        foreach (var node in this.tree.Nodes) this.GenerateSyntaxNodeExtensions(node);
+        this.codeBuilder.AppendLine("}");
+    }
+
+    private void GenerateSyntaxNodeExtensions(NodeModel node)
+    {
+        // Skip abstract nodes
+        if (node.IsAbstract) return;
+
+        // A hack to leave a line between the methods
+        // if (!ReferenceEquals(node, this.tree.Nodes.First(n => !n.IsAbstract))) this.codeBuilder.AppendLine();
+
+        // TODO: Implement
+    }
+
     private static string ToCamelCase(string name) => $"{char.ToLower(name[0])}{name[1..]}";
+
+    private static IEnumerable<FieldModel> WithTrivia(IEnumerable<FieldModel> fields) => fields
+        .Prepend(new()
+        {
+            Name = "LeadingTrivia",
+            Type = "Sequence<Token>",
+            Doc = "The leading trivia for this node.",
+            Override = true,
+        })
+        .Append(new()
+        {
+            Name = "TrailingTrivia",
+            Type = "Sequence<Token>",
+            Doc = "The trailing trivia for this node.",
+            Override = true,
+        });
+
+    private static IEnumerable<string> WithEmptyTrivia(IEnumerable<FieldModel> fields) => fields
+        .Select(field => ToCamelCase(field.Name))
+        .Prepend("Sequence<Token>.Empty")
+        .Append("Sequence<Token>.Empty");
 }

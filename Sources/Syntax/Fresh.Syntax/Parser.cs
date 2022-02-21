@@ -40,7 +40,7 @@ public sealed class Parser
         {
             declarations.Add(this.ParseDeclaration());
         }
-        return new(declarations.ToSequence(), end);
+        return SyntaxFactory.FileDeclaration(declarations.ToSequence(), end);
     }
 
     private DeclarationSyntax ParseDeclaration()
@@ -62,7 +62,7 @@ public sealed class Parser
         if (!this.TryMatch(TokenType.Identifier, out var name)) throw new NotImplementedException();
         var paramList = this.ParseParameterList();
         var body = this.ParseExpression();
-        return new(funcKw, name, paramList, body);
+        return SyntaxFactory.FunctionDeclaration(funcKw, name, paramList, body);
     }
 
     private ParameterListSyntax ParseParameterList()
@@ -71,7 +71,7 @@ public sealed class Parser
         if (!this.TryMatch(TokenType.OpenParenthesis, out var openParen)) throw new NotImplementedException();
         // TODO: Handle proper errors
         if (!this.TryMatch(TokenType.CloseParenthesis, out var closeParen)) throw new NotImplementedException();
-        return new(openParen, closeParen);
+        return SyntaxFactory.ParameterList(openParen, closeParen);
     }
 
     private ExpressionSyntax ParseExpression()
@@ -91,7 +91,7 @@ public sealed class Parser
         Debug.Assert(openBrace.Type == TokenType.OpenBrace);
         // TODO: Handle proper errors
         if (!this.TryMatch(TokenType.CloseBrace, out var closeBrace)) throw new NotImplementedException();
-        return new(openBrace, closeBrace);
+        return SyntaxFactory.BlockExpression(openBrace, closeBrace);
     }
 
     private bool TryMatch(TokenType tokenType, [MaybeNullWhen(false)] out SyntaxToken token)

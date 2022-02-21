@@ -3,7 +3,8 @@
     "System",
     "System.Collections.Generic",
     "System.Linq",
-    "System.Text"
+    "System.Text",
+    "Fresh.Common"
   ],
   "namespace": "Fresh.Syntax",
   "factory": "SyntaxFactory",

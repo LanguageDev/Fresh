@@ -22,7 +22,7 @@ func foo() {
         var tokens = Lexer.Lex(sourceText);
         var syntaxTokens = SyntaxTokenStream.Process(tokens);
         var tree = Parser.Parse(syntaxTokens);
-        Console.WriteLine(PrintNode(tree));
+        Console.WriteLine(tree.ToString());
     }
 
     private static string PrintNode(SyntaxNode n) => n switch

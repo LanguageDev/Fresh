@@ -3,13 +3,39 @@
 // Source repository: https://github.com/LanguageDev/Fresh
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Fresh.Common;
 
 namespace Fresh.Syntax;
+
+/// <summary>
+/// Interface for any syntax element in the tree.
+/// </summary>
+public interface ISyntaxElement
+{
+    /// <summary>
+    /// The leading trivia of the syntax element.
+    /// </summary>
+    public Sequence<Token> LeadingTrivia { get; }
+
+    /// <summary>
+    /// The trailing trivia of the syntax element.
+    /// </summary>
+    public Sequence<Token> TrailingTrivia { get; }
+
+    /// <summary>
+    /// The documentation comment group on this syntax element.
+    /// </summary>
+    public CommentGroup? Documentation { get; }
+
+    /// <summary>
+    /// The children as name and value pair inside this syntax node.
+    /// </summary>
+    public IEnumerable<KeyValuePair<string, object?>> Children { get; }
+}
 
 /// <summary>
 /// Represents comments that are right under each other without any blank lines.
@@ -26,12 +52,26 @@ public readonly record struct CommentGroup(Sequence<Token> Comments);
 public readonly record struct SyntaxToken(
     Sequence<Token> LeadingTrivia,
     Token Token,
-    Sequence<Token> TrailingTrivia)
+    Sequence<Token> TrailingTrivia) : ISyntaxElement
 {
     /// <summary>
     /// The type of the token.
     /// </summary>
     public TokenType Type => this.Token.Type;
+
+    /// <inheritdoc/>
+    public CommentGroup? Documentation => null;
+
+    /// <inheritdoc/>
+    public IEnumerable<KeyValuePair<string, object?>> Children
+    {
+        get
+        {
+            yield return new(nameof(this.LeadingTrivia), this.LeadingTrivia);
+            yield return new(nameof(this.Token), this.Token);
+            yield return new(nameof(this.TrailingTrivia), this.TrailingTrivia);
+        }
+    }
 
     public SyntaxToken(Token Token)
         : this(Sequence<Token>.Empty, Token, Sequence<Token>.Empty)
@@ -42,174 +82,117 @@ public readonly record struct SyntaxToken(
 /// <summary>
 /// The base for all syntax tree nodes.
 /// </summary>
-public abstract record class SyntaxNode
+public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
 {
-    /// <summary>
-    /// The documentation comment group on this syntax node.
-    /// </summary>
-    public virtual CommentGroup? Documentation => null;
-
-    /// <summary>
-    /// The leading trivia of this syntax node.
-    /// </summary>
+    /// <inheritdoc/>
     public abstract Sequence<Token> LeadingTrivia { get; }
 
-    /// <summary>
-    /// The trailing trivia of this syntax node.
-    /// </summary>
+    /// <inheritdoc/>
     public abstract Sequence<Token> TrailingTrivia { get; }
 
-    /// <summary>
-    /// Gets the leading trivia from a list of syntax nodes.
-    /// </summary>
-    /// <typeparam name="TSyntax">The type of the syntax nodes.</typeparam>
-    /// <param name="nodes">The list of nodes.</param>
-    /// <returns>The leading trivia of the first element in <paramref name="nodes"/>.</returns>
-    protected static Sequence<Token> GetLeadingTrivia<TSyntax>(IReadOnlyList<TSyntax> nodes)
-        where TSyntax : SyntaxNode => nodes.Count == 0
-        ? Sequence<Token>.Empty
-        : nodes[0].LeadingTrivia;
-
-    /// <summary>
-    /// Gets the trailing trivia from a list of syntax nodes.
-    /// </summary>
-    /// <typeparam name="TSyntax">The type of the syntax nodes.</typeparam>
-    /// <param name="nodes">The list of nodes.</param>
-    /// <returns>The trailing trivia of the last element in <paramref name="nodes"/>.</returns>
-    protected static Sequence<Token> GetTrailingTrivia<TSyntax>(IReadOnlyList<TSyntax> nodes)
-        where TSyntax : SyntaxNode => nodes.Count == 0
-        ? Sequence<Token>.Empty
-        : nodes[^1].TrailingTrivia;
-
-    /// <summary>
-    /// Utility to read out a doc comment attached right above a token from the <see cref="SyntaxNode.LeadingTrivia"/>.
-    /// </summary>
-    /// <param name="token">The token to get the attached documentation for.</param>
-    /// <returns>The comments that are right above <paramref name="token"/>, or null.</returns>
-    protected CommentGroup? GetDocumentationFor(SyntaxToken token)
-    {
-        // Check if there is any leading trivial
-        if (this.LeadingTrivia.Count == 0) return null;
-        // Take comments in reverse order
-        var lastComments = this.LeadingTrivia
-            .Where(t => t.IsComment)
-            .Reverse();
-        // Take comments while they are strictly stuck together
-        var comments = new List<Token>();
-        var minAllowedLine = token.Token.Location.Start.Line - 1;
-        foreach (var comment in comments)
-        {
-            if (comment.Location.Start.Line < minAllowedLine) break;
-            comments.Add(comment);
-            minAllowedLine = comment.Location.Start.Line - 1;
-        }
-        if (comments.Count == 0) return null;
-        comments.Reverse();
-        return new(comments.ToSequence());
-    }
-}
-
-/// <summary>
-/// The base for all statement syntax nodes.
-/// </summary>
-public abstract record class StatementSyntax : SyntaxNode;
-
-/// <summary>
-/// The base for all declaration syntax nodes.
-/// </summary>
-public abstract record class DeclarationSyntax : StatementSyntax;
-
-/// <summary>
-/// A full, parsed file.
-/// </summary>
-/// <param name="Declarations">The declarations in the file.</param>
-/// <param name="End">The end token.</param>
-public sealed record class FileDeclarationSyntax(
-    IReadOnlyList<DeclarationSyntax> Declarations,
-    SyntaxToken End) : DeclarationSyntax
-{
     /// <inheritdoc/>
-    public override CommentGroup? Documentation
+    public virtual CommentGroup? Documentation => null;
+
+    /// <inheritdoc/>
+    public abstract IEnumerable<KeyValuePair<string, object?>> Children { get; }
+
+    private const int indentSize = 2;
+
+    /// <inheritdoc/>
+    public override string ToString()
     {
-        get
+        var builder = new StringBuilder();
+        DebugPrint(builder, 0, null, this);
+        return builder.ToString();
+    }
+
+    private static void DebugPrint(StringBuilder builder, int indent, string? name, object? value)
+    {
+        // Handle null value
+        if (value is null)
         {
-            var maxAllowedLine = 0;
-            var comments = new List<Token>();
-            foreach (var comment in this.LeadingTrivia.Where(t => t.IsComment))
+            builder.Append("null");
+            return;
+        }
+
+        // Otherwise depends on what the name or value is
+        if (name == "LeadingTrivia" || name == "TrailingTrivia")
+        {
+            // Leading and trailing trivia is simple, we just list the strings in a debug string
+            var seq = (Sequence<Token>)value;
+            builder
+                .Append('[')
+                .AppendJoin(", ", seq.Select(t => ToDebugString(t.Text)))
+                .Append(']');
+            return;
+        }
+
+        // Sequences
+        if (value is IEnumerable enumerable)
+        {
+            builder.AppendLine("[");
+            foreach (var obj in enumerable)
             {
-                if (comment.Location.Start.Line > maxAllowedLine) break;
-                comments.Add(comment);
-                maxAllowedLine = comment.Location.End.Line + 1;
+                builder.Append(' ', (indent + 1) * indentSize);
+                DebugPrint(builder, indent + 1, null, obj);
+                builder.AppendLine(",");
             }
-            return new(comments.ToSequence());
+            builder
+                .Append(' ', indent * indentSize)
+                .Append(']');
+            return;
         }
+
+        // Syntax nodes
+        if (value is ISyntaxElement syntaxElement)
+        {
+            builder.AppendLine("{");
+            foreach (var (fieldName, obj) in syntaxElement.Children)
+            {
+                builder
+                    .Append(' ', (indent + 1) * indentSize)
+                    .Append(fieldName)
+                    .Append(": ");
+                DebugPrint(builder, indent + 1, fieldName, obj);
+                builder.AppendLine(",");
+            }
+            builder
+                .Append(' ', indent * indentSize)
+                .Append('}');
+            return;
+        }
+
+        // Tokens
+        if (value is Token token)
+        {
+            builder.Append(ToDebugString(token.Text));
+            return;
+        }
+
+        // Best-effort
+        builder.Append(value.ToString());
     }
 
-    /// <inheritdoc/>
-    public override Sequence<Token> LeadingTrivia => this.Declarations.Count == 0
-        ? this.End.LeadingTrivia
-        : this.Declarations[0].LeadingTrivia;
+    private static string ToDebugString(string text) => $"\"{EscapeString(text)}\"";
+
+    private static string EscapeString(string text) => text
+        .Replace("\a", @"\a")
+        .Replace("\b", @"\b")
+        .Replace("\f", @"\f")
+        .Replace("\n", @"\n")
+        .Replace("\r", @"\r")
+        .Replace("\t", @"\t")
+        .Replace("\v", @"\v")
+        .Replace("\\", @"\")
+        .Replace("\0", @"\0")
+        .Replace("\"", @"\""");
 
     /// <inheritdoc/>
-    public override Sequence<Token> TrailingTrivia => this.End.TrailingTrivia;
-}
-
-/// <summary>
-/// A function declaration.
-/// </summary>
-/// <param name="FuncKeyword">The keyword starting the declaration.</param>
-/// <param name="Name">The name of the function.</param>
-/// <param name="ParameterList">The parameter list syntax.</param>
-/// <param name="Body">The body of the function.</param>
-public sealed record class FunctionDeclarationSyntax(
-    SyntaxToken FuncKeyword,
-    SyntaxToken Name,
-    ParameterListSyntax ParameterList,
-    ExpressionSyntax Body) : DeclarationSyntax
-{
-    /// <inheritdoc/>
-    public override CommentGroup? Documentation => this.GetDocumentationFor(this.FuncKeyword);
+    public override bool Equals(object? obj) => this.Equals(obj as SyntaxNode);
 
     /// <inheritdoc/>
-    public override Sequence<Token> LeadingTrivia => this.FuncKeyword.LeadingTrivia;
+    public abstract bool Equals(SyntaxNode? other);
 
     /// <inheritdoc/>
-    public override Sequence<Token> TrailingTrivia => this.Body.TrailingTrivia;
-}
-
-/// <summary>
-/// A parameter list for a function declaration.
-/// </summary>
-/// <param name="OpenParenthesis">The open parenthesis.</param>
-/// <param name="CloseParenthesis">The close parenthesis.</param>
-public sealed record class ParameterListSyntax(
-    SyntaxToken OpenParenthesis,
-    SyntaxToken CloseParenthesis) : SyntaxNode
-{
-    /// <inheritdoc/>
-    public override Sequence<Token> LeadingTrivia => this.OpenParenthesis.LeadingTrivia;
-
-    /// <inheritdoc/>
-    public override Sequence<Token> TrailingTrivia => this.CloseParenthesis.TrailingTrivia;
-}
-
-/// <summary>
-/// The base for all expression syntax nodes.
-/// </summary>
-public abstract record class ExpressionSyntax : SyntaxNode;
-
-/// <summary>
-/// A code block syntax node.
-/// </summary>
-/// <param name="OpenBrace">The open brace.</param>
-/// <param name="CloseBrace">The close brace.</param>
-public sealed record class BlockExpressionSyntax(
-    SyntaxToken OpenBrace,
-    SyntaxToken CloseBrace) : ExpressionSyntax
-{
-    /// <inheritdoc/>
-    public override Sequence<Token> LeadingTrivia => this.OpenBrace.LeadingTrivia;
-
-    /// <inheritdoc/>
-    public override Sequence<Token> TrailingTrivia => this.CloseBrace.TrailingTrivia;
+    public abstract override int GetHashCode();
 }
