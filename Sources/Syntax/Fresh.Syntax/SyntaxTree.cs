@@ -146,7 +146,16 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
         // Syntax nodes
         if (value is ISyntaxElement syntaxElement)
         {
-            builder.AppendLine("{");
+            builder.Append(syntaxElement.GetType().Name).AppendLine(" {");
+            if (syntaxElement.Documentation is not null)
+            {
+                // It has documentation
+                builder
+                    .Append(' ', (indent + 1) * indentSize)
+                    .Append("Documentation: ");
+                DebugPrint(builder, indent + 1, null, syntaxElement.Documentation.Value.Comments);
+                builder.AppendLine(",");
+            }
             foreach (var (fieldName, obj) in syntaxElement.Children)
             {
                 builder
@@ -195,4 +204,26 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
 
     /// <inheritdoc/>
     public abstract override int GetHashCode();
+}
+
+public partial class FunctionDeclarationSyntax
+{
+    /// <inheritdoc/>
+    public override CommentGroup? Documentation
+    {
+        get
+        {
+            var trivia = this.FuncKeyword.LeadingTrivia;
+            var minAllowedLine = this.FuncKeyword.Token.Location.Start.Line - 1;
+            var comments = new List<Token>();
+            foreach (var comment in trivia.Where(t => t.IsComment).Reverse())
+            {
+                if (comment.Location.Start.Line < minAllowedLine) break;
+                minAllowedLine = comment.Location.Start.Line - 1;
+                comments.Add(comment);
+            }
+            comments.Reverse();
+            return comments.Count > 0 ? new(comments.ToSequence()) : null;
+        }
+    }
 }
