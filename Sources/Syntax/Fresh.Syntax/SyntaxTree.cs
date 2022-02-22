@@ -86,10 +86,10 @@ public readonly record struct SyntaxToken(
 public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
 {
     /// <inheritdoc/>
-    public abstract Sequence<Token> LeadingTrivia { get; }
+    public Sequence<Token> LeadingTrivia => GetFirstToken(this)!.Value.LeadingTrivia;
 
     /// <inheritdoc/>
-    public abstract Sequence<Token> TrailingTrivia { get; }
+    public Sequence<Token> TrailingTrivia => GetLastToken(this)!.Value.TrailingTrivia;
 
     /// <inheritdoc/>
     public virtual CommentGroup? Documentation => null;
@@ -125,6 +125,44 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
         var builder = new StringBuilder();
         DebugPrint(builder, 0, null, this);
         return builder.ToString();
+    }
+
+    private static SyntaxToken? GetFirstToken(object? value)
+    {
+        if (value is SyntaxToken syntaxToken) return syntaxToken;
+        if (value is ISyntaxElement syntaxElement)
+        {
+            return syntaxElement.Children
+                .Select(c => GetFirstToken(c.Value))
+                .First(t => t is not null)!.Value;
+        }
+        if (value is IEnumerable enumerable)
+        {
+            return enumerable
+                .Cast<object?>()
+                .Select(GetFirstToken)
+                .First(t => t is not null)!.Value;
+        }
+        throw new InvalidOperationException();
+    }
+
+    private static SyntaxToken? GetLastToken(object? value)
+    {
+        if (value is SyntaxToken syntaxToken) return syntaxToken;
+        if (value is ISyntaxElement syntaxElement)
+        {
+            return syntaxElement.Children
+                .Select(c => GetLastToken(c.Value))
+                .Last(t => t is not null)!.Value;
+        }
+        if (value is IEnumerable enumerable)
+        {
+            return enumerable
+                .Cast<object?>()
+                .Select(GetLastToken)
+                .Last(t => t is not null)!.Value;
+        }
+        throw new InvalidOperationException();
     }
 
     private static void WriteSourceTextImpl(TextWriter writer, object? value)
