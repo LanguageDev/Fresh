@@ -287,6 +287,27 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
     public abstract override int GetHashCode();
 }
 
+public partial class FileDeclarationSyntax
+{
+    /// <inheritdoc/>
+    public override CommentGroup? Documentation
+    {
+        get
+        {
+            var trivia = this.LeadingTrivia;
+            var maxAllowedLine = 0;
+            var comments = new List<Token>();
+            foreach (var comment in trivia.Where(t => t.IsComment))
+            {
+                if (comment.Location.Start.Line > maxAllowedLine) break;
+                maxAllowedLine = comment.Location.Start.Line + 1;
+                comments.Add(comment);
+            }
+            return comments.Count > 0 ? new(comments.ToSequence()) : null;
+        }
+    }
+}
+
 public partial class FunctionDeclarationSyntax
 {
     /// <inheritdoc/>
@@ -294,7 +315,7 @@ public partial class FunctionDeclarationSyntax
     {
         get
         {
-            var trivia = this.FuncKeyword.LeadingTrivia;
+            var trivia = this.LeadingTrivia;
             var minAllowedLine = this.FuncKeyword.Token.Location.Start.Line - 1;
             var comments = new List<Token>();
             foreach (var comment in trivia.Where(t => t.IsComment).Reverse())
