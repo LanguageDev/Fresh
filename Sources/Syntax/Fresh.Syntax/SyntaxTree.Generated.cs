@@ -56,11 +56,11 @@ public sealed partial class FileDeclarationSyntax : DeclarationSyntax
     {
         public Sequence<DeclarationSyntax.GreenNode> Declarations { get; }
 
-        public SyntaxToken End { get; }
+        public SyntaxToken.GreenNode End { get; }
 
         public GreenNode(
             Sequence<DeclarationSyntax.GreenNode> declarations,
-            SyntaxToken end)
+            SyntaxToken.GreenNode end)
         {
             this.Declarations = declarations;
             this.End = end;
@@ -95,7 +95,7 @@ public sealed partial class FileDeclarationSyntax : DeclarationSyntax
     /// <summary>
     /// The end of file token.
     /// </summary>
-    public SyntaxToken End => this.Green.End;
+    public SyntaxToken End => this.Green.End.ToRedNode(this);
 
     internal override GreenNode Green { get; }
 
@@ -113,17 +113,17 @@ public sealed partial class FunctionDeclarationSyntax : DeclarationSyntax
 {
     new internal sealed partial class GreenNode : DeclarationSyntax.GreenNode
     {
-        public SyntaxToken FuncKeyword { get; }
+        public SyntaxToken.GreenNode FuncKeyword { get; }
 
-        public SyntaxToken Name { get; }
+        public SyntaxToken.GreenNode Name { get; }
 
         public ParameterListSyntax.GreenNode ParameterList { get; }
 
         public ExpressionSyntax.GreenNode Body { get; }
 
         public GreenNode(
-            SyntaxToken funcKeyword,
-            SyntaxToken name,
+            SyntaxToken.GreenNode funcKeyword,
+            SyntaxToken.GreenNode name,
             ParameterListSyntax.GreenNode parameterList,
             ExpressionSyntax.GreenNode body)
         {
@@ -163,12 +163,12 @@ public sealed partial class FunctionDeclarationSyntax : DeclarationSyntax
     /// <summary>
     /// The function keyword.
     /// </summary>
-    public SyntaxToken FuncKeyword => this.Green.FuncKeyword;
+    public SyntaxToken FuncKeyword => this.Green.FuncKeyword.ToRedNode(this);
 
     /// <summary>
     /// The name of the function.
     /// </summary>
-    public SyntaxToken Name => this.Green.Name;
+    public SyntaxToken Name => this.Green.Name.ToRedNode(this);
 
     /// <summary>
     /// The parameters of the function.
@@ -196,13 +196,13 @@ public sealed partial class ParameterListSyntax : SyntaxNode
 {
     new internal sealed partial class GreenNode : SyntaxNode.GreenNode
     {
-        public SyntaxToken OpenParenthesis { get; }
+        public SyntaxToken.GreenNode OpenParenthesis { get; }
 
-        public SyntaxToken CloseParenthesis { get; }
+        public SyntaxToken.GreenNode CloseParenthesis { get; }
 
         public GreenNode(
-            SyntaxToken openParenthesis,
-            SyntaxToken closeParenthesis)
+            SyntaxToken.GreenNode openParenthesis,
+            SyntaxToken.GreenNode closeParenthesis)
         {
             this.OpenParenthesis = openParenthesis;
             this.CloseParenthesis = closeParenthesis;
@@ -232,12 +232,12 @@ public sealed partial class ParameterListSyntax : SyntaxNode
     /// <summary>
     /// The open parenthesis token.
     /// </summary>
-    public SyntaxToken OpenParenthesis => this.Green.OpenParenthesis;
+    public SyntaxToken OpenParenthesis => this.Green.OpenParenthesis.ToRedNode(this);
 
     /// <summary>
     /// The close parenthesis token.
     /// </summary>
-    public SyntaxToken CloseParenthesis => this.Green.CloseParenthesis;
+    public SyntaxToken CloseParenthesis => this.Green.CloseParenthesis.ToRedNode(this);
 
     internal override GreenNode Green { get; }
 
@@ -255,13 +255,13 @@ public sealed partial class BlockExpressionSyntax : ExpressionSyntax
 {
     new internal sealed partial class GreenNode : ExpressionSyntax.GreenNode
     {
-        public SyntaxToken OpenBrace { get; }
+        public SyntaxToken.GreenNode OpenBrace { get; }
 
-        public SyntaxToken CloseBrace { get; }
+        public SyntaxToken.GreenNode CloseBrace { get; }
 
         public GreenNode(
-            SyntaxToken openBrace,
-            SyntaxToken closeBrace)
+            SyntaxToken.GreenNode openBrace,
+            SyntaxToken.GreenNode closeBrace)
         {
             this.OpenBrace = openBrace;
             this.CloseBrace = closeBrace;
@@ -291,12 +291,12 @@ public sealed partial class BlockExpressionSyntax : ExpressionSyntax
     /// <summary>
     /// The open brace token.
     /// </summary>
-    public SyntaxToken OpenBrace => this.Green.OpenBrace;
+    public SyntaxToken OpenBrace => this.Green.OpenBrace.ToRedNode(this);
 
     /// <summary>
     /// The close brace token.
     /// </summary>
-    public SyntaxToken CloseBrace => this.Green.CloseBrace;
+    public SyntaxToken CloseBrace => this.Green.CloseBrace.ToRedNode(this);
 
     internal override GreenNode Green { get; }
 
@@ -321,7 +321,7 @@ public static partial class SyntaxFactory
         IEnumerable<DeclarationSyntax> declarations,
         SyntaxToken end) => new(null, new(
         declarations.Select(n => n.Green).ToSequence(),
-        end));
+        end.Green));
 
     /// <summary>
     /// Constructs a <see cref="FunctionDeclarationSyntax"/> from the given arguments.
@@ -335,8 +335,8 @@ public static partial class SyntaxFactory
         SyntaxToken name,
         ParameterListSyntax parameterList,
         ExpressionSyntax body) => new(null, new(
-        funcKeyword,
-        name,
+        funcKeyword.Green,
+        name.Green,
         parameterList.Green,
         body.Green));
 
@@ -348,8 +348,8 @@ public static partial class SyntaxFactory
     public static ParameterListSyntax ParameterList(
         SyntaxToken openParenthesis,
         SyntaxToken closeParenthesis) => new(null, new(
-        openParenthesis,
-        closeParenthesis));
+        openParenthesis.Green,
+        closeParenthesis.Green));
 
     /// <summary>
     /// Constructs a <see cref="BlockExpressionSyntax"/> from the given arguments.
@@ -359,8 +359,8 @@ public static partial class SyntaxFactory
     public static BlockExpressionSyntax BlockExpression(
         SyntaxToken openBrace,
         SyntaxToken closeBrace) => new(null, new(
-        openBrace,
-        closeBrace));
+        openBrace.Green,
+        closeBrace.Green));
 }
 /// <summary>
 /// Provides extension methods for the syntax nodes.

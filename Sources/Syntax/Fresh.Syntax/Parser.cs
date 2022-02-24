@@ -25,7 +25,7 @@ public sealed class Parser
     }
 
     private readonly IEnumerator<SyntaxToken> tokens;
-    private readonly RingBuffer<SyntaxToken> peekBuffer = new();
+    private readonly RingBuffer<SyntaxToken.GreenNode> peekBuffer = new();
 
     private Parser(IEnumerator<SyntaxToken> tokenSource)
     {
@@ -35,7 +35,7 @@ public sealed class Parser
     public FileDeclarationSyntax ParseFileDeclaration()
     {
         var declarations = new List<DeclarationSyntax.GreenNode>();
-        SyntaxToken end;
+        SyntaxToken.GreenNode end;
         while (!this.TryMatch(TokenType.End, out end))
         {
             declarations.Add(this.ParseDeclaration());
@@ -94,20 +94,20 @@ public sealed class Parser
         return new(openBrace, closeBrace);
     }
 
-    private bool TryMatch(TokenType tokenType, [MaybeNullWhen(false)] out SyntaxToken token)
+    private bool TryMatch(TokenType tokenType, [MaybeNullWhen(false)] out SyntaxToken.GreenNode token)
     {
         if (!this.TryPeek(0, out token) || token.Type != tokenType) return false;
         token = this.Take();
         return true;
     }
 
-    private SyntaxToken Take()
+    private SyntaxToken.GreenNode Take()
     {
         if (!this.TryPeek(0, out _)) throw new InvalidOperationException($"Could nod take a token");
         return this.peekBuffer.RemoveFront();
     }
 
-    private bool TryPeek(int offset, [MaybeNullWhen(false)] out SyntaxToken token)
+    private bool TryPeek(int offset, [MaybeNullWhen(false)] out SyntaxToken.GreenNode token)
     {
         // Read as long as there aren't enough tokens in the peek buffer
         while (this.peekBuffer.Count <= offset)
@@ -119,7 +119,7 @@ public sealed class Parser
                 return false;
             }
             // This token was read successfully
-            this.peekBuffer.AddBack(this.tokens.Current);
+            this.peekBuffer.AddBack(this.tokens.Current.Green);
         }
         // We have enough tokens in the buffer
         token = this.peekBuffer[offset];

@@ -77,13 +77,13 @@ public sealed class SyntaxTokenStream
             {
                 // EOF hit, all is trivia
                 var trailingTrivia = offs > 0 ? this.Take(offs) : Sequence<Token>.Empty;
-                return new(leadingTrivia, token, trailingTrivia);
+                return new(null, new(leadingTrivia, token, trailingTrivia));
             }
             if (!t.IsTrivia)
             {
                 // Not a trivia anymore, only consume until end of line
                 var trailingTrivia = endOfLineOffs > 0 ? this.Take(endOfLineOffs) : Sequence<Token>.Empty;
-                return new(leadingTrivia, token, trailingTrivia);
+                return new(null, new(leadingTrivia, token, trailingTrivia));
             }
             // Still trivia
             ++offs;

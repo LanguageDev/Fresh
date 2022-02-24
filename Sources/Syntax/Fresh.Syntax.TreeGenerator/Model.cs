@@ -16,6 +16,7 @@ public sealed class TreeModel
     public string? Namespace { get; set; }
     public string? Factory { get; set; }
     public string Root { get; set; } = string.Empty;
+    public string[] Builtins { get; set; } = Array.Empty<string>();
     public NodeModel[] Nodes { get; set; } = Array.Empty<NodeModel>();
 }
 

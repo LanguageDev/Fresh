@@ -24,12 +24,16 @@ public sealed class Generator
 
     private readonly StringBuilder codeBuilder = new();
     private readonly TreeModel tree;
-    private readonly Dictionary<string, NodeModel> nodes;
+    private readonly HashSet<string> allNodeNames;
 
     private Generator(TreeModel treeModel)
     {
         this.tree = treeModel;
-        this.nodes = treeModel.Nodes.ToDictionary(n => n.Name);
+        this.allNodeNames = treeModel.Nodes
+            .Select(n => n.Name)
+            .Append(treeModel.Root)
+            .Concat(treeModel.Builtins)
+            .ToHashSet();
     }
 
     public void GenerateCode()
@@ -100,7 +104,7 @@ public sealed class Generator
                 fieldType = $"Syntax{fieldType}";
                 accessor = $"new({accessor}, n => ({elementType})n.ToRedNode(this))";
             }
-            else if (this.nodes.ContainsKey(fieldType))
+            else if (this.allNodeNames.Contains(fieldType))
             {
                 accessor = $"{accessor}.ToRedNode(this)";
             }
@@ -139,7 +143,7 @@ public sealed class Generator
     private void GenerateGreenClass(NodeModel node)
     {
         string ToGreenPropertyType(FieldModel field) => this.IsNodeSequence(field.Type, out var elementType)
-            ? $"Sequence<{elementType}.GreenNode>" : this.nodes.ContainsKey(field.Type)
+            ? $"Sequence<{elementType}.GreenNode>" : this.allNodeNames.Contains(field.Type)
             ? $"{field.Type}.GreenNode" : field.Type;
 
         var extModifier = node.IsAbstract ? "abstract" : "sealed";
@@ -279,7 +283,7 @@ public sealed class Generator
             {
                 fieldRef = $"{fieldRef}.Select(n => n.Green).ToSequence()";
             }
-            else if (this.nodes.ContainsKey(field.Type))
+            else if (this.allNodeNames.Contains(field.Type))
             {
                 fieldRef = $"{fieldRef}.Green";
             }
@@ -319,7 +323,7 @@ public sealed class Generator
             return false;
         }
         elementType = type[9..^1];
-        return this.nodes.ContainsKey(elementType);
+        return this.allNodeNames.Contains(elementType);
     }
 
     private static string ToCamelCase(string name) => $"{char.ToLower(name[0])}{name[1..]}";
