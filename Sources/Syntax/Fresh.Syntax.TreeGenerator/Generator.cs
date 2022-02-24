@@ -266,7 +266,9 @@ public sealed class Generator
         this.codeBuilder.AppendLine($"    public static {node.Name} {methodName}(");
         foreach (var field in node.Fields)
         {
-            this.codeBuilder.Append($"        {field.Type} {ToCamelCase(field.Name)}");
+            var fieldType = field.Type;
+            if (this.IsNodeSequence(fieldType, out var elementType)) fieldType = $"IEnumerable<{elementType}>";
+            this.codeBuilder.Append($"        {fieldType} {ToCamelCase(field.Name)}");
             if (ReferenceEquals(field, node.Fields[^1])) this.codeBuilder.AppendLine($") => new(null, new(");
             else this.codeBuilder.AppendLine(",");
         }

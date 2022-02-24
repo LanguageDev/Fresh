@@ -318,7 +318,7 @@ public static partial class SyntaxFactory
     /// <param name="declarations">The declarations contained in the file.</param>
     /// <param name="end">The end of file token.</param>
     public static FileDeclarationSyntax FileDeclaration(
-        Sequence<DeclarationSyntax> declarations,
+        IEnumerable<DeclarationSyntax> declarations,
         SyntaxToken end) => new(null, new(
         declarations.Select(n => n.Green).ToSequence(),
         end));
