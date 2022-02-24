@@ -13,6 +13,12 @@ namespace Fresh.Syntax;
 /// </summary>
 public abstract partial class StatementSyntax : SyntaxNode
 {
+    new internal abstract partial class GreenNode : SyntaxNode.GreenNode
+    {
+        public abstract override StatementSyntax ToRedNode(SyntaxNode? parent);
+    }
+
+    internal abstract override GreenNode Green { get; }
 }
 
 /// <summary>
@@ -20,6 +26,12 @@ public abstract partial class StatementSyntax : SyntaxNode
 /// </summary>
 public abstract partial class ExpressionSyntax : SyntaxNode
 {
+    new internal abstract partial class GreenNode : SyntaxNode.GreenNode
+    {
+        public abstract override ExpressionSyntax ToRedNode(SyntaxNode? parent);
+    }
+
+    internal abstract override GreenNode Green { get; }
 }
 
 /// <summary>
@@ -27,6 +39,12 @@ public abstract partial class ExpressionSyntax : SyntaxNode
 /// </summary>
 public abstract partial class DeclarationSyntax : StatementSyntax
 {
+    new internal abstract partial class GreenNode : StatementSyntax.GreenNode
+    {
+        public abstract override DeclarationSyntax ToRedNode(SyntaxNode? parent);
+    }
+
+    internal abstract override GreenNode Green { get; }
 }
 
 /// <summary>
@@ -34,48 +52,57 @@ public abstract partial class DeclarationSyntax : StatementSyntax
 /// </summary>
 public sealed partial class FileDeclarationSyntax : DeclarationSyntax
 {
+    new internal sealed partial class GreenNode : DeclarationSyntax.GreenNode
+    {
+        public Sequence<DeclarationSyntax.GreenNode> Declarations { get; }
+
+        public SyntaxToken End { get; }
+
+        public GreenNode(
+            Sequence<DeclarationSyntax.GreenNode> declarations,
+            SyntaxToken end)
+        {
+            this.Declarations = declarations;
+            this.End = end;
+        }
+
+        public override bool Equals(SyntaxNode.GreenNode? other) =>
+               other is GreenNode o
+            && this.Declarations.Equals(o.Declarations)
+            && this.End.Equals(o.End);
+
+        public override int GetHashCode() => HashCode.Combine(
+            this.Declarations,
+            this.End);
+
+        public override IEnumerable<KeyValuePair<string, object?>> Children
+        {
+            get
+            {
+                yield return new("Declarations", this.Declarations);
+                yield return new("End", this.End);
+            }
+        }
+
+        public override FileDeclarationSyntax ToRedNode(SyntaxNode? parent) => new(parent, this);
+    }
+
     /// <summary>
     /// The declarations contained in the file.
     /// </summary>
-    public Sequence<DeclarationSyntax> Declarations { get; }
+    public SyntaxSequence<DeclarationSyntax> Declarations => new(this.Green.Declarations, n => (DeclarationSyntax)n.ToRedNode(this));
 
     /// <summary>
     /// The end of file token.
     /// </summary>
-    public SyntaxToken End { get; }
+    public SyntaxToken End => this.Green.End;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="FileDeclarationSyntax"/> class.
-    /// </summary>
-    /// <param name="declarations">The declarations contained in the file.</param>
-    /// <param name="end">The end of file token.</param>
-    internal FileDeclarationSyntax(
-        Sequence<DeclarationSyntax> declarations,
-        SyntaxToken end)
+    internal override GreenNode Green { get; }
+
+    internal FileDeclarationSyntax(SyntaxNode? parent, GreenNode green)
     {
-        this.Declarations = declarations;
-        this.End = end;
-    }
-
-    /// <inheritdoc/>
-    public override bool Equals(SyntaxNode? other) =>
-           other is FileDeclarationSyntax o
-        && this.Declarations.Equals(o.Declarations)
-        && this.End.Equals(o.End);
-
-    /// <inheritdoc/>
-    public override int GetHashCode() => HashCode.Combine(
-        this.Declarations,
-        this.End);
-
-    /// <inheritdoc/>
-    public override IEnumerable<KeyValuePair<string, object?>> Children
-    {
-        get
-        {
-            yield return new("Declarations", this.Declarations);
-            yield return new("End", this.End);
-        }
+        this.Parent = parent;
+        this.Green = green;
     }
 }
 
@@ -84,70 +111,81 @@ public sealed partial class FileDeclarationSyntax : DeclarationSyntax
 /// </summary>
 public sealed partial class FunctionDeclarationSyntax : DeclarationSyntax
 {
+    new internal sealed partial class GreenNode : DeclarationSyntax.GreenNode
+    {
+        public SyntaxToken FuncKeyword { get; }
+
+        public SyntaxToken Name { get; }
+
+        public ParameterListSyntax.GreenNode ParameterList { get; }
+
+        public ExpressionSyntax.GreenNode Body { get; }
+
+        public GreenNode(
+            SyntaxToken funcKeyword,
+            SyntaxToken name,
+            ParameterListSyntax.GreenNode parameterList,
+            ExpressionSyntax.GreenNode body)
+        {
+            this.FuncKeyword = funcKeyword;
+            this.Name = name;
+            this.ParameterList = parameterList;
+            this.Body = body;
+        }
+
+        public override bool Equals(SyntaxNode.GreenNode? other) =>
+               other is GreenNode o
+            && this.FuncKeyword.Equals(o.FuncKeyword)
+            && this.Name.Equals(o.Name)
+            && this.ParameterList.Equals(o.ParameterList)
+            && this.Body.Equals(o.Body);
+
+        public override int GetHashCode() => HashCode.Combine(
+            this.FuncKeyword,
+            this.Name,
+            this.ParameterList,
+            this.Body);
+
+        public override IEnumerable<KeyValuePair<string, object?>> Children
+        {
+            get
+            {
+                yield return new("FuncKeyword", this.FuncKeyword);
+                yield return new("Name", this.Name);
+                yield return new("ParameterList", this.ParameterList);
+                yield return new("Body", this.Body);
+            }
+        }
+
+        public override FunctionDeclarationSyntax ToRedNode(SyntaxNode? parent) => new(parent, this);
+    }
+
     /// <summary>
     /// The function keyword.
     /// </summary>
-    public SyntaxToken FuncKeyword { get; }
+    public SyntaxToken FuncKeyword => this.Green.FuncKeyword;
 
     /// <summary>
     /// The name of the function.
     /// </summary>
-    public SyntaxToken Name { get; }
+    public SyntaxToken Name => this.Green.Name;
 
     /// <summary>
     /// The parameters of the function.
     /// </summary>
-    public ParameterListSyntax ParameterList { get; }
+    public ParameterListSyntax ParameterList => this.Green.ParameterList.ToRedNode(this);
 
     /// <summary>
     /// The body of the function.
     /// </summary>
-    public ExpressionSyntax Body { get; }
+    public ExpressionSyntax Body => this.Green.Body.ToRedNode(this);
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="FunctionDeclarationSyntax"/> class.
-    /// </summary>
-    /// <param name="funcKeyword">The function keyword.</param>
-    /// <param name="name">The name of the function.</param>
-    /// <param name="parameterList">The parameters of the function.</param>
-    /// <param name="body">The body of the function.</param>
-    internal FunctionDeclarationSyntax(
-        SyntaxToken funcKeyword,
-        SyntaxToken name,
-        ParameterListSyntax parameterList,
-        ExpressionSyntax body)
+    internal override GreenNode Green { get; }
+
+    internal FunctionDeclarationSyntax(SyntaxNode? parent, GreenNode green)
     {
-        this.FuncKeyword = funcKeyword;
-        this.Name = name;
-        this.ParameterList = parameterList;
-        this.Body = body;
-    }
-
-    /// <inheritdoc/>
-    public override bool Equals(SyntaxNode? other) =>
-           other is FunctionDeclarationSyntax o
-        && this.FuncKeyword.Equals(o.FuncKeyword)
-        && this.Name.Equals(o.Name)
-        && this.ParameterList.Equals(o.ParameterList)
-        && this.Body.Equals(o.Body);
-
-    /// <inheritdoc/>
-    public override int GetHashCode() => HashCode.Combine(
-        this.FuncKeyword,
-        this.Name,
-        this.ParameterList,
-        this.Body);
-
-    /// <inheritdoc/>
-    public override IEnumerable<KeyValuePair<string, object?>> Children
-    {
-        get
-        {
-            yield return new("FuncKeyword", this.FuncKeyword);
-            yield return new("Name", this.Name);
-            yield return new("ParameterList", this.ParameterList);
-            yield return new("Body", this.Body);
-        }
+        this.Parent = parent;
+        this.Green = green;
     }
 }
 
@@ -156,48 +194,57 @@ public sealed partial class FunctionDeclarationSyntax : DeclarationSyntax
 /// </summary>
 public sealed partial class ParameterListSyntax : SyntaxNode
 {
+    new internal sealed partial class GreenNode : SyntaxNode.GreenNode
+    {
+        public SyntaxToken OpenParenthesis { get; }
+
+        public SyntaxToken CloseParenthesis { get; }
+
+        public GreenNode(
+            SyntaxToken openParenthesis,
+            SyntaxToken closeParenthesis)
+        {
+            this.OpenParenthesis = openParenthesis;
+            this.CloseParenthesis = closeParenthesis;
+        }
+
+        public override bool Equals(SyntaxNode.GreenNode? other) =>
+               other is GreenNode o
+            && this.OpenParenthesis.Equals(o.OpenParenthesis)
+            && this.CloseParenthesis.Equals(o.CloseParenthesis);
+
+        public override int GetHashCode() => HashCode.Combine(
+            this.OpenParenthesis,
+            this.CloseParenthesis);
+
+        public override IEnumerable<KeyValuePair<string, object?>> Children
+        {
+            get
+            {
+                yield return new("OpenParenthesis", this.OpenParenthesis);
+                yield return new("CloseParenthesis", this.CloseParenthesis);
+            }
+        }
+
+        public override ParameterListSyntax ToRedNode(SyntaxNode? parent) => new(parent, this);
+    }
+
     /// <summary>
     /// The open parenthesis token.
     /// </summary>
-    public SyntaxToken OpenParenthesis { get; }
+    public SyntaxToken OpenParenthesis => this.Green.OpenParenthesis;
 
     /// <summary>
     /// The close parenthesis token.
     /// </summary>
-    public SyntaxToken CloseParenthesis { get; }
+    public SyntaxToken CloseParenthesis => this.Green.CloseParenthesis;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ParameterListSyntax"/> class.
-    /// </summary>
-    /// <param name="openParenthesis">The open parenthesis token.</param>
-    /// <param name="closeParenthesis">The close parenthesis token.</param>
-    internal ParameterListSyntax(
-        SyntaxToken openParenthesis,
-        SyntaxToken closeParenthesis)
+    internal override GreenNode Green { get; }
+
+    internal ParameterListSyntax(SyntaxNode? parent, GreenNode green)
     {
-        this.OpenParenthesis = openParenthesis;
-        this.CloseParenthesis = closeParenthesis;
-    }
-
-    /// <inheritdoc/>
-    public override bool Equals(SyntaxNode? other) =>
-           other is ParameterListSyntax o
-        && this.OpenParenthesis.Equals(o.OpenParenthesis)
-        && this.CloseParenthesis.Equals(o.CloseParenthesis);
-
-    /// <inheritdoc/>
-    public override int GetHashCode() => HashCode.Combine(
-        this.OpenParenthesis,
-        this.CloseParenthesis);
-
-    /// <inheritdoc/>
-    public override IEnumerable<KeyValuePair<string, object?>> Children
-    {
-        get
-        {
-            yield return new("OpenParenthesis", this.OpenParenthesis);
-            yield return new("CloseParenthesis", this.CloseParenthesis);
-        }
+        this.Parent = parent;
+        this.Green = green;
     }
 }
 
@@ -206,48 +253,57 @@ public sealed partial class ParameterListSyntax : SyntaxNode
 /// </summary>
 public sealed partial class BlockExpressionSyntax : ExpressionSyntax
 {
+    new internal sealed partial class GreenNode : ExpressionSyntax.GreenNode
+    {
+        public SyntaxToken OpenBrace { get; }
+
+        public SyntaxToken CloseBrace { get; }
+
+        public GreenNode(
+            SyntaxToken openBrace,
+            SyntaxToken closeBrace)
+        {
+            this.OpenBrace = openBrace;
+            this.CloseBrace = closeBrace;
+        }
+
+        public override bool Equals(SyntaxNode.GreenNode? other) =>
+               other is GreenNode o
+            && this.OpenBrace.Equals(o.OpenBrace)
+            && this.CloseBrace.Equals(o.CloseBrace);
+
+        public override int GetHashCode() => HashCode.Combine(
+            this.OpenBrace,
+            this.CloseBrace);
+
+        public override IEnumerable<KeyValuePair<string, object?>> Children
+        {
+            get
+            {
+                yield return new("OpenBrace", this.OpenBrace);
+                yield return new("CloseBrace", this.CloseBrace);
+            }
+        }
+
+        public override BlockExpressionSyntax ToRedNode(SyntaxNode? parent) => new(parent, this);
+    }
+
     /// <summary>
     /// The open brace token.
     /// </summary>
-    public SyntaxToken OpenBrace { get; }
+    public SyntaxToken OpenBrace => this.Green.OpenBrace;
 
     /// <summary>
     /// The close brace token.
     /// </summary>
-    public SyntaxToken CloseBrace { get; }
+    public SyntaxToken CloseBrace => this.Green.CloseBrace;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="BlockExpressionSyntax"/> class.
-    /// </summary>
-    /// <param name="openBrace">The open brace token.</param>
-    /// <param name="closeBrace">The close brace token.</param>
-    internal BlockExpressionSyntax(
-        SyntaxToken openBrace,
-        SyntaxToken closeBrace)
+    internal override GreenNode Green { get; }
+
+    internal BlockExpressionSyntax(SyntaxNode? parent, GreenNode green)
     {
-        this.OpenBrace = openBrace;
-        this.CloseBrace = closeBrace;
-    }
-
-    /// <inheritdoc/>
-    public override bool Equals(SyntaxNode? other) =>
-           other is BlockExpressionSyntax o
-        && this.OpenBrace.Equals(o.OpenBrace)
-        && this.CloseBrace.Equals(o.CloseBrace);
-
-    /// <inheritdoc/>
-    public override int GetHashCode() => HashCode.Combine(
-        this.OpenBrace,
-        this.CloseBrace);
-
-    /// <inheritdoc/>
-    public override IEnumerable<KeyValuePair<string, object?>> Children
-    {
-        get
-        {
-            yield return new("OpenBrace", this.OpenBrace);
-            yield return new("CloseBrace", this.CloseBrace);
-        }
+        this.Parent = parent;
+        this.Green = green;
     }
 }
 
@@ -263,9 +319,9 @@ public static partial class SyntaxFactory
     /// <param name="end">The end of file token.</param>
     public static FileDeclarationSyntax FileDeclaration(
         Sequence<DeclarationSyntax> declarations,
-        SyntaxToken end) => new FileDeclarationSyntax(
-        declarations,
-        end);
+        SyntaxToken end) => new(null, new(
+        declarations.Select(n => n.Green).ToSequence(),
+        end));
 
     /// <summary>
     /// Constructs a <see cref="FunctionDeclarationSyntax"/> from the given arguments.
@@ -278,11 +334,11 @@ public static partial class SyntaxFactory
         SyntaxToken funcKeyword,
         SyntaxToken name,
         ParameterListSyntax parameterList,
-        ExpressionSyntax body) => new FunctionDeclarationSyntax(
+        ExpressionSyntax body) => new(null, new(
         funcKeyword,
         name,
-        parameterList,
-        body);
+        parameterList.Green,
+        body.Green));
 
     /// <summary>
     /// Constructs a <see cref="ParameterListSyntax"/> from the given arguments.
@@ -291,9 +347,9 @@ public static partial class SyntaxFactory
     /// <param name="closeParenthesis">The close parenthesis token.</param>
     public static ParameterListSyntax ParameterList(
         SyntaxToken openParenthesis,
-        SyntaxToken closeParenthesis) => new ParameterListSyntax(
+        SyntaxToken closeParenthesis) => new(null, new(
         openParenthesis,
-        closeParenthesis);
+        closeParenthesis));
 
     /// <summary>
     /// Constructs a <see cref="BlockExpressionSyntax"/> from the given arguments.
@@ -302,9 +358,9 @@ public static partial class SyntaxFactory
     /// <param name="closeBrace">The close brace token.</param>
     public static BlockExpressionSyntax BlockExpression(
         SyntaxToken openBrace,
-        SyntaxToken closeBrace) => new BlockExpressionSyntax(
+        SyntaxToken closeBrace) => new(null, new(
         openBrace,
-        closeBrace);
+        closeBrace));
 }
 /// <summary>
 /// Provides extension methods for the syntax nodes.

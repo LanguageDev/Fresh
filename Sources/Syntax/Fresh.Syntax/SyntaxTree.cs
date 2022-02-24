@@ -81,6 +81,37 @@ public readonly record struct SyntaxToken(
 }
 
 /// <summary>
+/// Represents a sequence of syntax elements.
+/// </summary>
+/// <typeparam name="TElement">The syntax element type.</typeparam>
+public readonly record struct SyntaxSequence<TElement> : IReadOnlyList<TElement>
+    where TElement : ISyntaxElement
+{
+    private readonly IReadOnlyList<SyntaxNode.GreenNode> greenNodes;
+    private readonly Func<SyntaxNode.GreenNode, TElement> transformer;
+
+    /// <inheritdoc/>
+    public int Count => this.greenNodes.Count;
+
+    /// <inheritdoc/>
+    public TElement this[int index] => this.transformer(this.greenNodes[index]);
+
+    internal SyntaxSequence(
+        IReadOnlyList<SyntaxNode.GreenNode> greenNodes,
+        Func<SyntaxNode.GreenNode, TElement> transformer)
+    {
+        this.greenNodes = greenNodes;
+        this.transformer = transformer;
+    }
+
+    /// <inheritdoc/>
+    public IEnumerator<TElement> GetEnumerator() => this.greenNodes.Select(this.transformer).GetEnumerator();
+
+    /// <inheritdoc/>
+    IEnumerator IEnumerable.GetEnumerator() => this.GetEnumerator();
+}
+
+/// <summary>
 /// The base for all syntax tree nodes.
 /// </summary>
 public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
@@ -101,7 +132,7 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
 
         public abstract override int GetHashCode();
 
-        public abstract SyntaxNode ToRedNode();
+        public abstract SyntaxNode ToRedNode(SyntaxNode? parent);
     }
 
     /// <inheritdoc/>
@@ -113,9 +144,14 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
     /// <inheritdoc/>
     public CommentGroup? Documentation => this.Green.Documentation;
 
-    // TODO: TRANSFORM GREEN CHILDREN INTO RED
+    /// <summary>
+    /// The parent node of this one.
+    /// </summary>
+    public SyntaxNode? Parent { get; protected set; } // NOTE: It's only being set in child constructors, simplifies codegen
+
     /// <inheritdoc/>
-    public IEnumerable<KeyValuePair<string, object?>> Children => this.Green.Children;
+    public IEnumerable<KeyValuePair<string, object?>> Children => this.Green.Children
+        .Select(kv => new KeyValuePair<string, object?>(kv.Key, this.ToRedObject(kv.Value)));
 
     private const int indentSize = 2;
 
@@ -158,43 +194,38 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
         return builder.ToString();
     }
 
-    private static SyntaxToken? GetFirstToken(object? value)
+    private object? ToRedObject(object? value) => value switch
     {
-        if (value is SyntaxToken syntaxToken) return syntaxToken;
-        if (value is ISyntaxElement syntaxElement)
-        {
-            return syntaxElement.Children
-                .Select(c => GetFirstToken(c.Value))
-                .First(t => t is not null)!.Value;
-        }
-        if (value is IEnumerable enumerable)
-        {
-            return enumerable
-                .Cast<object?>()
-                .Select(GetFirstToken)
-                .First(t => t is not null)!.Value;
-        }
-        throw new InvalidOperationException();
-    }
+        GreenNode g => g.ToRedNode(this),
+        IReadOnlyList<GreenNode> l => new SyntaxSequence<SyntaxNode>(l, n => n.ToRedNode(this)),
+        _ => value,
+    };
 
-    private static SyntaxToken? GetLastToken(object? value)
+    private static SyntaxToken? GetFirstToken(object? value) => value switch
     {
-        if (value is SyntaxToken syntaxToken) return syntaxToken;
-        if (value is ISyntaxElement syntaxElement)
-        {
-            return syntaxElement.Children
-                .Select(c => GetLastToken(c.Value))
-                .Last(t => t is not null)!.Value;
-        }
-        if (value is IEnumerable enumerable)
-        {
-            return enumerable
-                .Cast<object?>()
-                .Select(GetLastToken)
-                .Last(t => t is not null)!.Value;
-        }
-        throw new InvalidOperationException();
-    }
+        SyntaxToken syntaxToken => syntaxToken,
+        ISyntaxElement syntaxElement => syntaxElement.Children
+            .Select(c => GetFirstToken(c.Value))
+            .First(t => t is not null)!.Value,
+        IEnumerable enumerable => enumerable
+            .Cast<object?>()
+            .Select(GetFirstToken)
+            .First(t => t is not null)!.Value,
+        _ => throw new InvalidOperationException(),
+    };
+
+    private static SyntaxToken? GetLastToken(object? value) => value switch
+    {
+        SyntaxToken syntaxToken => syntaxToken,
+        ISyntaxElement syntaxElement => syntaxElement.Children
+            .Select(c => GetLastToken(c.Value))
+            .Last(t => t is not null)!.Value,
+        IEnumerable enumerable => enumerable
+            .Cast<object?>()
+            .Select(GetLastToken)
+            .Last(t => t is not null)!.Value,
+        _ => throw new InvalidOperationException(),
+    };
 
     private static void WriteSourceTextImpl(TextWriter writer, object? value)
     {
@@ -311,43 +342,49 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
 
 public partial class FileDeclarationSyntax
 {
-    /// <inheritdoc/>
-    public override CommentGroup? Documentation
+    internal partial class GreenNode
     {
-        get
+        /// <inheritdoc/>
+        public override CommentGroup? Documentation
         {
-            var trivia = this.LeadingTrivia;
-            var maxAllowedLine = 0;
-            var comments = new List<Token>();
-            foreach (var comment in trivia.Where(t => t.IsComment))
+            get
             {
-                if (comment.Location.Start.Line > maxAllowedLine) break;
-                maxAllowedLine = comment.Location.Start.Line + 1;
-                comments.Add(comment);
+                var trivia = this.LeadingTrivia;
+                var maxAllowedLine = 0;
+                var comments = new List<Token>();
+                foreach (var comment in trivia.Where(t => t.IsComment))
+                {
+                    if (comment.Location.Start.Line > maxAllowedLine) break;
+                    maxAllowedLine = comment.Location.Start.Line + 1;
+                    comments.Add(comment);
+                }
+                return comments.Count > 0 ? new(comments.ToSequence()) : null;
             }
-            return comments.Count > 0 ? new(comments.ToSequence()) : null;
         }
     }
 }
 
 public partial class FunctionDeclarationSyntax
 {
-    /// <inheritdoc/>
-    public override CommentGroup? Documentation
+    internal partial class GreenNode
     {
-        get
+        /// <inheritdoc/>
+        public override CommentGroup? Documentation
         {
-            var trivia = this.LeadingTrivia;
-            var minAllowedLine = this.FuncKeyword.Token.Location.Start.Line - 1;
-            var comments = new List<Token>();
-            foreach (var comment in trivia.Where(t => t.IsComment).Reverse())
+            get
             {
-                if (comment.Location.Start.Line < minAllowedLine) break;
-                minAllowedLine = comment.Location.Start.Line - 1;
-                comments.Add(comment);
+                var trivia = this.LeadingTrivia;
+                var minAllowedLine = this.FuncKeyword.Token.Location.Start.Line - 1;
+                var comments = new List<Token>();
+                foreach (var comment in trivia.Where(t => t.IsComment).Reverse())
+                {
+                    if (comment.Location.Start.Line < minAllowedLine) break;
+                    minAllowedLine = comment.Location.Start.Line - 1;
+                    comments.Add(comment);
+                }
+                comments.Reverse();
+                return comments.Count > 0 ? new(comments.ToSequence()) : null;
             }
-            comments.Reverse();
-            return comments.Count > 0 ? new(comments.ToSequence()) : null;
         }
     }
 }
