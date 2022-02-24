@@ -36,7 +36,6 @@ public sealed class Lexer
     private readonly SourceText sourceText;
     private readonly TextReader sourceReader;
     private readonly RingBuffer<char> peekBuffer = new();
-    private Cursor cursor;
 
     private Lexer(SourceText sourceText)
     {
@@ -124,21 +123,15 @@ public sealed class Lexer
                 _ => TokenType.Identifier,
             };
             // Construct result
-            return new(ident.Location, tokenType, ident.Text);
+            return new(ident.SourceText, tokenType, ident.Text);
         }
 
         // Unknown
         return this.Take(1, TokenType.Unknown);
     }
 
-    private Token Take(int length, TokenType type)
-    {
-        var startPosition = this.cursor.Position;
-        var text = this.Take(length);
-        var endPosition = this.cursor.Position;
-        var location = new Location(this.sourceText, new(startPosition, endPosition));
-        return new(location, type, text);
-    }
+    private Token Take(int length, TokenType type) =>
+        new(this.sourceText, type, this.Take(length));
 
     private string Take(int length)
     {
@@ -148,7 +141,6 @@ public sealed class Lexer
         for (var i = 0; i < length; ++i)
         {
             var ch = this.peekBuffer.RemoveFront();
-            this.cursor.Append(ch);
             result.Append(ch);
         }
         return result.ToString();
@@ -158,7 +150,7 @@ public sealed class Lexer
     {
         if (length == 0) return;
         if (!this.TryPeek(length - 1, out _)) throw new InvalidOperationException($"Could nod skip {length} amount");
-        for (var i = 0; i < length; ++i) this.cursor.Append(this.peekBuffer.RemoveFront());
+        for (var i = 0; i < length; ++i) this.peekBuffer.RemoveFront();
         this.peekBuffer.Clear();
     }
 

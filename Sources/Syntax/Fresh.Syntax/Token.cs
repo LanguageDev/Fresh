@@ -13,10 +13,10 @@ namespace Fresh.Syntax;
 /// <summary>
 /// Represents a single token the lexer can produce.
 /// </summary>
-/// <param name="Location">The location of the token.</param>
+/// <param name="SourceText">The text the token originates from.</param>
 /// <param name="Type">The type of the token.</param>
 /// <param name="Text">The text the token was parsed from.</param>
-public sealed record class Token(Location Location, TokenType Type, string Text)
+public sealed record class Token(SourceText SourceText, TokenType Type, string Text)
 {
     /// <summary>
     /// True, if this is a spacing token.

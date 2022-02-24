@@ -338,6 +338,24 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
         .Replace("\\", @"\")
         .Replace("\0", @"\0")
         .Replace("\"", @"\""");
+
+    protected static IEnumerable<Token> TakeCommentGroup(IEnumerable<Token> tokens)
+    {
+        var wasNewline = false;
+        foreach (var token in tokens)
+        {
+            if (token.Type == TokenType.Newline)
+            {
+                if (wasNewline) break;
+                wasNewline = true;
+            }
+            else
+            {
+                wasNewline = false;
+            }
+            if (token.IsComment) yield return token;
+        }
+    }
 }
 
 public partial class FileDeclarationSyntax
@@ -349,16 +367,9 @@ public partial class FileDeclarationSyntax
         {
             get
             {
-                var trivia = this.LeadingTrivia;
-                var maxAllowedLine = 0;
-                var comments = new List<Token>();
-                foreach (var comment in trivia.Where(t => t.IsComment))
-                {
-                    if (comment.Location.Start.Line > maxAllowedLine) break;
-                    maxAllowedLine = comment.Location.Start.Line + 1;
-                    comments.Add(comment);
-                }
-                return comments.Count > 0 ? new(comments.ToSequence()) : null;
+                var comments = TakeCommentGroup(this.LeadingTrivia).ToList();
+                if (comments.Count == 0) return null;
+                return new(comments.ToSequence());
             }
         }
     }
@@ -373,17 +384,10 @@ public partial class FunctionDeclarationSyntax
         {
             get
             {
-                var trivia = this.LeadingTrivia;
-                var minAllowedLine = this.FuncKeyword.Token.Location.Start.Line - 1;
-                var comments = new List<Token>();
-                foreach (var comment in trivia.Where(t => t.IsComment).Reverse())
-                {
-                    if (comment.Location.Start.Line < minAllowedLine) break;
-                    minAllowedLine = comment.Location.Start.Line - 1;
-                    comments.Add(comment);
-                }
+                var comments = TakeCommentGroup(this.LeadingTrivia.Reverse()).ToList();
+                if (comments.Count == 0) return null;
                 comments.Reverse();
-                return comments.Count > 0 ? new(comments.ToSequence()) : null;
+                return new(comments.ToSequence());
             }
         }
     }

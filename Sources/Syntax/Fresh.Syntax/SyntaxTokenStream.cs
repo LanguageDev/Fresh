@@ -63,7 +63,11 @@ public sealed class SyntaxTokenStream
         // If we find a token later that's not trivia, we only consider trailing trivia inline with the original token
         // We first consume trivia until the end of line
         offs = 0;
-        for (; this.TryPeek(offs, out var t) && t.IsTrivia && t.Location.Start.Line == token.Location.End.Line; ++offs) ;
+        var cursor = default(Cursor);
+        for (; cursor.Line == 0
+            && this.TryPeek(offs, out var t)
+            && t.IsTrivia;
+            cursor.Append(t.Text), ++offs) ;
         // Now we can save the end of line
         var endOfLineOffs = offs;
         // Now we continue until we either hit the EOF (all is trivia) or a non-trivia token (only until end of line)

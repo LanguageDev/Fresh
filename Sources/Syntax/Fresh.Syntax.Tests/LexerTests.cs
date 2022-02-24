@@ -15,39 +15,33 @@ public sealed class LexerTests
 {
     public static IEnumerable<object[]> LexedTokens => new List<object[]>
     {
-        new object[] { "", MakeToken(TokenType.End, "", "0:0:0-0:0:0") },
+        new object[] { "", MakeToken(TokenType.End, "") },
         new object[]
         {
             "   ",
-            MakeToken(TokenType.Whitespace, "   ", "0:0:0-0:3:3"),
-            MakeToken(TokenType.End, "", "0:3:3-0:3:3"),
+            MakeToken(TokenType.Whitespace, "   "),
+            MakeToken(TokenType.End, ""),
         },
         new object[]
         {
             "foo \nbar  \rbaz \t \r\n ",
-            MakeToken(TokenType.Identifier, "foo", "0:0:0-0:3:3"),
-            MakeToken(TokenType.Whitespace, " ", "0:3:3-0:4:4"),
-            MakeToken(TokenType.Newline, "\n", "0:4:4-1:0:5"),
-            MakeToken(TokenType.Identifier, "bar", "1:0:5-1:3:8"),
-            MakeToken(TokenType.Whitespace, "  ", "1:3:8-1:5:10"),
-            MakeToken(TokenType.Newline, "\r", "1:5:10-2:0:11"),
-            MakeToken(TokenType.Identifier, "baz", "2:0:11-2:3:14"),
-            MakeToken(TokenType.Whitespace, " \t ", "2:3:14-2:6:17"),
-            MakeToken(TokenType.Newline, "\r\n", "2:6:17-3:0:19"),
-            MakeToken(TokenType.Whitespace, " ", "3:0:19-3:1:20"),
-            MakeToken(TokenType.End, "", "3:1:20-3:1:20"),
+            MakeToken(TokenType.Identifier, "foo"),
+            MakeToken(TokenType.Whitespace, " "),
+            MakeToken(TokenType.Newline, "\n"),
+            MakeToken(TokenType.Identifier, "bar"),
+            MakeToken(TokenType.Whitespace, "  "),
+            MakeToken(TokenType.Newline, "\r"),
+            MakeToken(TokenType.Identifier, "baz"),
+            MakeToken(TokenType.Whitespace, " \t "),
+            MakeToken(TokenType.Newline, "\r\n"),
+            MakeToken(TokenType.Whitespace, " "),
+            MakeToken(TokenType.End, ""),
         },
     };
 
     private static SourceText emptySource = SourceText.FromString(string.Empty, string.Empty);
 
-    private static Token MakeToken(TokenType tt, string text, string pos)
-    {
-        var startAndEnd = pos.Split('-');
-        var range = new Range(MakePosition(startAndEnd[0]), MakePosition(startAndEnd[1]));
-        var loc = new Location(emptySource, range);
-        return new(loc, tt, text);
-    }
+    private static Token MakeToken(TokenType tt, string text) => new(emptySource, tt, text);
 
     private static Position MakePosition(string pos)
     {
@@ -58,7 +52,7 @@ public sealed class LexerTests
     // NOTE: We ignore location
     private static void AssertTokenEquals(Token expected, Token got)
     {
-        Assert.Equal(expected.Location.Range, got.Location.Range);
+        // Assert.Equal(expected.Location.Range, got.Location.Range);
         Assert.Equal(expected.Text, got.Text);
         Assert.Equal(expected.Type, got.Type);
     }

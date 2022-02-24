@@ -38,6 +38,15 @@ public struct Cursor
     private bool lastCr;
 
     /// <summary>
+    /// Appends a string to the cursor, stepping it.
+    /// </summary>
+    /// <param name="str">The string to append.</param>
+    public void Append(string str)
+    {
+        foreach (var ch in str) this.Append(ch);
+    }
+
+    /// <summary>
     /// Appends a character to the cursor, stepping it.
     /// </summary>
     /// <param name="ch">The character to append.</param>
