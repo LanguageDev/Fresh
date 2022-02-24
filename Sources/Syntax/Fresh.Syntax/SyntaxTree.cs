@@ -85,19 +85,50 @@ public readonly record struct SyntaxToken(
 /// </summary>
 public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
 {
-    /// <inheritdoc/>
-    public Sequence<Token> LeadingTrivia => GetFirstToken(this)!.Value.LeadingTrivia;
+    internal abstract class GreenNode : ISyntaxElement, IEquatable<GreenNode>
+    {
+        public Sequence<Token> LeadingTrivia => GetFirstToken(this)!.Value.LeadingTrivia;
+
+        public Sequence<Token> TrailingTrivia => GetLastToken(this)!.Value.TrailingTrivia;
+
+        public virtual CommentGroup? Documentation => null;
+
+        public abstract IEnumerable<KeyValuePair<string, object?>> Children { get; }
+
+        public override bool Equals(object? obj) => this.Equals(obj as GreenNode);
+
+        public abstract bool Equals(GreenNode? other);
+
+        public abstract override int GetHashCode();
+
+        public abstract SyntaxNode ToRedNode();
+    }
 
     /// <inheritdoc/>
-    public Sequence<Token> TrailingTrivia => GetLastToken(this)!.Value.TrailingTrivia;
+    public Sequence<Token> LeadingTrivia => this.Green.LeadingTrivia;
 
     /// <inheritdoc/>
-    public virtual CommentGroup? Documentation => null;
+    public Sequence<Token> TrailingTrivia => this.Green.TrailingTrivia;
 
     /// <inheritdoc/>
-    public abstract IEnumerable<KeyValuePair<string, object?>> Children { get; }
+    public CommentGroup? Documentation => this.Green.Documentation;
+
+    // TODO: TRANSFORM GREEN CHILDREN INTO RED
+    /// <inheritdoc/>
+    public IEnumerable<KeyValuePair<string, object?>> Children => this.Green.Children;
 
     private const int indentSize = 2;
+
+    internal abstract GreenNode Green { get; }
+
+    /// <inheritdoc/>
+    public override bool Equals(object? obj) => this.Equals(obj as SyntaxNode);
+
+    /// <inheritdoc/>
+    public bool Equals(SyntaxNode? other) => this.Green.Equals(other?.Green);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => this.Green.GetHashCode();
 
     /// <summary>
     /// Converts the syntax tree to source code.
@@ -276,15 +307,6 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
         .Replace("\\", @"\")
         .Replace("\0", @"\0")
         .Replace("\"", @"\""");
-
-    /// <inheritdoc/>
-    public override bool Equals(object? obj) => this.Equals(obj as SyntaxNode);
-
-    /// <inheritdoc/>
-    public abstract bool Equals(SyntaxNode? other);
-
-    /// <inheritdoc/>
-    public abstract override int GetHashCode();
 }
 
 public partial class FileDeclarationSyntax
