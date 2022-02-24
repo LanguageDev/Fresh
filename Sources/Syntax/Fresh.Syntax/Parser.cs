@@ -34,16 +34,16 @@ public sealed class Parser
 
     public FileDeclarationSyntax ParseFileDeclaration()
     {
-        var declarations = new List<DeclarationSyntax>();
+        var declarations = new List<DeclarationSyntax.GreenNode>();
         SyntaxToken end;
         while (!this.TryMatch(TokenType.End, out end))
         {
             declarations.Add(this.ParseDeclaration());
         }
-        return SyntaxFactory.FileDeclaration(declarations.ToSequence(), end);
+        return new(null, new(declarations.ToSequence(), end));
     }
 
-    private DeclarationSyntax ParseDeclaration()
+    private DeclarationSyntax.GreenNode ParseDeclaration()
     {
         Debug.Assert(this.TryPeek(0, out var head));
         return head.Token.Type switch
@@ -54,7 +54,7 @@ public sealed class Parser
         };
     }
 
-    private FunctionDeclarationSyntax ParseFunctionDeclaration()
+    private FunctionDeclarationSyntax.GreenNode ParseFunctionDeclaration()
     {
         var funcKw = this.Take();
         Debug.Assert(funcKw.Type == TokenType.KeywordFunc);
@@ -62,19 +62,19 @@ public sealed class Parser
         if (!this.TryMatch(TokenType.Identifier, out var name)) throw new NotImplementedException();
         var paramList = this.ParseParameterList();
         var body = this.ParseExpression();
-        return SyntaxFactory.FunctionDeclaration(funcKw, name, paramList, body);
+        return new(funcKw, name, paramList, body);
     }
 
-    private ParameterListSyntax ParseParameterList()
+    private ParameterListSyntax.GreenNode ParseParameterList()
     {
         // TODO: Handle proper errors
         if (!this.TryMatch(TokenType.OpenParenthesis, out var openParen)) throw new NotImplementedException();
         // TODO: Handle proper errors
         if (!this.TryMatch(TokenType.CloseParenthesis, out var closeParen)) throw new NotImplementedException();
-        return SyntaxFactory.ParameterList(openParen, closeParen);
+        return new(openParen, closeParen);
     }
 
-    private ExpressionSyntax ParseExpression()
+    private ExpressionSyntax.GreenNode ParseExpression()
     {
         Debug.Assert(this.TryPeek(0, out var head));
         return head.Token.Type switch
@@ -85,13 +85,13 @@ public sealed class Parser
         };
     }
 
-    private BlockExpressionSyntax ParseBlockExpression()
+    private BlockExpressionSyntax.GreenNode ParseBlockExpression()
     {
         var openBrace = this.Take();
         Debug.Assert(openBrace.Type == TokenType.OpenBrace);
         // TODO: Handle proper errors
         if (!this.TryMatch(TokenType.CloseBrace, out var closeBrace)) throw new NotImplementedException();
-        return SyntaxFactory.BlockExpression(openBrace, closeBrace);
+        return new(openBrace, closeBrace);
     }
 
     private bool TryMatch(TokenType tokenType, [MaybeNullWhen(false)] out SyntaxToken token)
