@@ -35,4 +35,5 @@ public sealed class FieldModel
     public string Type { get; set; } = string.Empty;
     public string? Doc { get; set; }
     public bool Override { get; set; } = false;
+    public bool IsOptional { get; set; } = false;
 }

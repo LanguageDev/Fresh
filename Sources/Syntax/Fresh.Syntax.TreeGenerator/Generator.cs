@@ -21,6 +21,7 @@ public sealed class Generator
     }
 
     private const int indentSize = 2;
+    private static readonly string[] keywords = new[] { "operator" };
 
     private readonly StringBuilder codeBuilder = new();
     private readonly TreeModel tree;
@@ -106,9 +107,12 @@ public sealed class Generator
             }
             else if (this.allNodeNames.Contains(fieldType))
             {
+                if (field.IsOptional) accessor = $"{accessor}?";
                 accessor = $"{accessor}.ToRedNode(this)";
             }
-            this.codeBuilder.AppendLine($"    public {overrideSpec}{fieldType} {field.Name} => {accessor};");
+            if (field.IsOptional) fieldType = $"{fieldType}?";
+            this.codeBuilder.AppendLine($"    public {overrideSpec}{fieldType} {field.Name} =>");
+            this.codeBuilder.AppendLine($"        {accessor};");
         }
 
         // Green node property
@@ -142,9 +146,14 @@ public sealed class Generator
 
     private void GenerateGreenClass(NodeModel node)
     {
-        string ToGreenPropertyType(FieldModel field) => this.IsNodeSequence(field.Type, out var elementType)
-            ? $"Sequence<{elementType}.GreenNode>" : this.allNodeNames.Contains(field.Type)
-            ? $"{field.Type}.GreenNode" : field.Type;
+        string ToGreenPropertyType(FieldModel field)
+        {
+            var fieldType = this.IsNodeSequence(field.Type, out var elementType)
+                ? $"Sequence<{elementType}.GreenNode>" : this.allNodeNames.Contains(field.Type)
+                ? $"{field.Type}.GreenNode" : field.Type;
+            if (field.IsOptional) fieldType = $"{fieldType}?";
+            return fieldType;
+        }
 
         var extModifier = node.IsAbstract ? "abstract" : "sealed";
         var baseModifier = node.Base is null ? string.Empty : $" : {node.Base}.GreenNode";
@@ -194,7 +203,7 @@ public sealed class Generator
             this.codeBuilder.AppendLine($"               other is GreenNode o");
             foreach (var field in node.Fields)
             {
-                this.codeBuilder.Append($"            && this.{field.Name}.Equals(o.{field.Name})");
+                this.codeBuilder.Append($"            && object.Equals(this.{field.Name}, o.{field.Name})");
                 if (ReferenceEquals(field, node.Fields[^1])) this.codeBuilder.Append(';');
                 this.codeBuilder.AppendLine();
             }
@@ -272,6 +281,7 @@ public sealed class Generator
         {
             var fieldType = field.Type;
             if (this.IsNodeSequence(fieldType, out var elementType)) fieldType = $"IEnumerable<{elementType}>";
+            if (field.IsOptional) fieldType = $"{fieldType}?";
             this.codeBuilder.Append($"        {fieldType} {ToCamelCase(field.Name)}");
             if (ReferenceEquals(field, node.Fields[^1])) this.codeBuilder.AppendLine($") => new(null, new(");
             else this.codeBuilder.AppendLine(",");
@@ -285,6 +295,7 @@ public sealed class Generator
             }
             else if (this.allNodeNames.Contains(field.Type))
             {
+                if (field.IsOptional) fieldRef = $"{fieldRef}?";
                 fieldRef = $"{fieldRef}.Green";
             }
             this.codeBuilder.Append($"        {fieldRef}");
@@ -326,5 +337,10 @@ public sealed class Generator
         return this.allNodeNames.Contains(elementType);
     }
 
-    private static string ToCamelCase(string name) => $"{char.ToLower(name[0])}{name[1..]}";
+    private static string ToCamelCase(string name)
+    {
+        var result = $"{char.ToLower(name[0])}{name[1..]}";
+        if (keywords.Contains(result)) result = $"@{result}";
+        return result;
+    }
 }

@@ -36,23 +36,6 @@
       "isAbstract": true
     },
     {
-        "name": "TypeSpecifierSyntax",
-        "doc": "Syntax for specifying a type of a parameter or a variable.",
-        "base": "SyntaxNode",
-        "fields": [
-            {
-                "name": "Colon",
-                "type": "SyntaxToken",
-                "doc": "The colon token."
-            },
-            {
-                "name": "Type",
-                "type": "TypeSyntax",
-                "doc": "The specified type."
-            }
-        ]
-    },
-    {
       "name": "ModuleDeclarationSyntax",
       "doc": "A full, parsed module containing all of its declarations.",
       "base": "DeclarationSyntax",
@@ -113,11 +96,56 @@
           "doc": "The open parenthesis token."
         },
         {
+            "name": "Parameters",
+            "type": "Sequence<ParameterSyntax>",
+            "doc": "The parameters of the function."
+        },
+        {
           "name": "CloseParenthesis",
           "type": "SyntaxToken",
           "doc": "The close parenthesis token."
         }
       ]
+    },
+    {
+        "name": "ParameterSyntax",
+        "doc": "Syntax for a single parameter in a function declaration.",
+        "base": "SyntaxNode",
+        "fields": [
+            {
+                "name": "Name",
+                "type": "SyntaxToken",
+                "doc": "The name of the parameter."
+            },
+            {
+                "name": "TypeSpecifier",
+                "type": "TypeSpecifierSyntax",
+                "doc": "The type specifier of the parameter."
+            },
+            {
+                "name": "Comma",
+                "type": "SyntaxToken",
+                "doc": "The comma token.",
+                "isOptional": true
+            }
+        ]
+    },
+    {
+        "name": "TypeSpecifierSyntax",
+        "doc": "Syntax for specifying a type of a parameter or a variable.",
+        "base": "SyntaxNode",
+        "fields": [
+            {
+                "name": "Colon",
+                "type": "SyntaxToken",
+                "doc": "The colon token."
+            },
+            {
+                "name": "Type",
+                "type": "TypeSyntax",
+                "doc": "The specified type."
+            }
+        ]
     },
     {
       "name": "BlockExpressionSyntax",
@@ -145,6 +173,23 @@
                 "name": "Identifier",
                 "type": "SyntaxToken",
                 "doc": "The identifier token."
+            }
+        ]
+    },
+    {
+        "name": "PrefixUnaryExpressionSyntax",
+        "doc": "A prefix unary expression.",
+        "base": "ExpressionSyntax",
+        "fields": [
+            {
+                "name": "Operator",
+                "type": "SyntaxToken",
+                "doc": "The operator token."
+            },
+            {
+                "name": "Operand",
+                "type": "ExpressionSyntax",
+                "doc": "The operand expression."
             }
         ]
     },
