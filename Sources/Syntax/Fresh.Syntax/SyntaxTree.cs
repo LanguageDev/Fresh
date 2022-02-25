@@ -390,7 +390,7 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
     }
 }
 
-public partial class FileDeclarationSyntax
+public partial class ModuleDeclarationSyntax
 {
     internal partial class GreenNode
     {

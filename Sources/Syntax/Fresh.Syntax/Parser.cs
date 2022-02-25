@@ -18,7 +18,7 @@ namespace Fresh.Syntax;
 /// </summary>
 public sealed class Parser
 {
-    public static FileDeclarationSyntax Parse(IEnumerable<SyntaxToken> tokens)
+    public static ModuleDeclarationSyntax Parse(IEnumerable<SyntaxToken> tokens)
     {
         var parser = new Parser(tokens.GetEnumerator());
         return parser.ParseFileDeclaration();
@@ -32,7 +32,7 @@ public sealed class Parser
         this.tokens = tokenSource;
     }
 
-    public FileDeclarationSyntax ParseFileDeclaration()
+    public ModuleDeclarationSyntax ParseFileDeclaration()
     {
         var declarations = new List<DeclarationSyntax.GreenNode>();
         SyntaxToken.GreenNode end;
@@ -61,17 +61,42 @@ public sealed class Parser
         // TODO: Handle proper errors
         if (!this.TryMatch(TokenType.Identifier, out var name)) throw new NotImplementedException();
         var paramList = this.ParseParameterList();
+        TypeSpecifierSyntax.GreenNode? typeSpecifier = null;
+        if (this.TryMatch(TokenType.Colon, out var colon))
+        {
+            var returnType = this.ParseType();
+            typeSpecifier = new(colon, returnType);
+        }
         var body = this.ParseExpression();
-        return new(funcKw, name, paramList, body);
+        return new(funcKw, name, paramList, typeSpecifier, body);
     }
 
     private ParameterListSyntax.GreenNode ParseParameterList()
     {
         // TODO: Handle proper errors
         if (!this.TryMatch(TokenType.OpenParenthesis, out var openParen)) throw new NotImplementedException();
+
+        var parameters = new List<ParameterSyntax.GreenNode>();
+        while (!this.TryPeek(TokenType.CloseParenthesis))
+        {
+            // TODO: Handle proper errors
+            if (!this.TryMatch(TokenType.Identifier, out var parameterName)) throw new NotImplementedException();
+
+            // TODO: Handle proper errors
+            if (!this.TryMatch(TokenType.Colon, out var parameterColon)) throw new NotImplementedException();
+
+            var parameterType = this.ParseType();
+            var keepGoing = this.TryMatch(TokenType.Comma, out var comma);
+
+            parameters.Add(new(parameterName, new(parameterColon, parameterType), keepGoing ? comma : null));
+
+            if (!keepGoing) break;
+        }
+
         // TODO: Handle proper errors
         if (!this.TryMatch(TokenType.CloseParenthesis, out var closeParen)) throw new NotImplementedException();
-        return new(openParen, closeParen);
+
+        return new(openParen, parameters.ToSequence(), closeParen);
     }
 
     private ExpressionSyntax.GreenNode ParseExpression()
@@ -94,12 +119,22 @@ public sealed class Parser
         return new(openBrace, closeBrace);
     }
 
+    private TypeSyntax.GreenNode ParseType()
+    {
+        if (this.TryMatch(TokenType.Identifier, out var typeIdent)) return new IdentifierSyntax.GreenNode(typeIdent);
+        // TODO: Handle proper errors
+        throw new NotImplementedException();
+    }
+
     private bool TryMatch(TokenType tokenType, [MaybeNullWhen(false)] out SyntaxToken.GreenNode token)
     {
         if (!this.TryPeek(0, out token) || token.Type != tokenType) return false;
         token = this.Take();
         return true;
     }
+
+    private bool TryPeek(TokenType tokenType) =>
+        this.TryPeek(0, out var token) && token.Type == tokenType;
 
     private SyntaxToken.GreenNode Take()
     {

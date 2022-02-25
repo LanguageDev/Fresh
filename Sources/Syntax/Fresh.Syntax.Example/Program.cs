@@ -15,7 +15,7 @@ internal class Program
 
 // This is a function
 // With doc comment
-func foo() {
+func foo(x: int, y: bool): int {
     // And this is a comment inside
 }
 ";
