@@ -9,7 +9,9 @@
   "namespace": "Fresh.Syntax",
   "factory": "SyntaxFactory",
   "root": "SyntaxNode",
-  "builtins": ["SyntaxToken"],
+  "builtins": [
+    "SyntaxToken"
+  ],
   "nodes": [
     {
       "name": "StatementSyntax",
@@ -24,10 +26,10 @@
       "isAbstract": true
     },
     {
-        "name": "TypeSyntax",
-        "doc": "The base for all type syntax nodes.",
-        "base": "ExpressionSyntax",
-        "isAbstract": true
+      "name": "TypeSyntax",
+      "doc": "The base for all type syntax nodes.",
+      "base": "ExpressionSyntax",
+      "isAbstract": true
     },
     {
       "name": "DeclarationSyntax",
@@ -73,10 +75,10 @@
           "doc": "The parameters of the function."
         },
         {
-            "name": "TypeSpecifier",
-            "type": "TypeSpecifierSyntax",
-            "isOptional": true,
-            "doc": "The return type specifier."
+          "name": "TypeSpecifier",
+          "type": "TypeSpecifierSyntax",
+          "isOptional": true,
+          "doc": "The return type specifier."
         },
         {
           "name": "Body",
@@ -96,9 +98,9 @@
           "doc": "The open parenthesis token."
         },
         {
-            "name": "Parameters",
-            "type": "Sequence<ParameterSyntax>",
-            "doc": "The parameters of the function."
+          "name": "Parameters",
+          "type": "Sequence<ParameterSyntax>",
+          "doc": "The parameters of the function."
         },
         {
           "name": "CloseParenthesis",
@@ -108,44 +110,44 @@
       ]
     },
     {
-        "name": "ParameterSyntax",
-        "doc": "Syntax for a single parameter in a function declaration.",
-        "base": "SyntaxNode",
-        "fields": [
-            {
-                "name": "Name",
-                "type": "SyntaxToken",
-                "doc": "The name of the parameter."
-            },
-            {
-                "name": "TypeSpecifier",
-                "type": "TypeSpecifierSyntax",
-                "doc": "The type specifier of the parameter."
-            },
-            {
-                "name": "Comma",
-                "type": "SyntaxToken",
-                "doc": "The comma token.",
-                "isOptional": true
-            }
-        ]
+      "name": "ParameterSyntax",
+      "doc": "Syntax for a single parameter in a function declaration.",
+      "base": "SyntaxNode",
+      "fields": [
+        {
+          "name": "Name",
+          "type": "SyntaxToken",
+          "doc": "The name of the parameter."
+        },
+        {
+          "name": "TypeSpecifier",
+          "type": "TypeSpecifierSyntax",
+          "doc": "The type specifier of the parameter."
+        },
+        {
+          "name": "Comma",
+          "type": "SyntaxToken",
+          "doc": "The comma token.",
+          "isOptional": true
+        }
+      ]
     },
     {
-        "name": "TypeSpecifierSyntax",
-        "doc": "Syntax for specifying a type of a parameter or a variable.",
-        "base": "SyntaxNode",
-        "fields": [
-            {
-                "name": "Colon",
-                "type": "SyntaxToken",
-                "doc": "The colon token."
-            },
-            {
-                "name": "Type",
-                "type": "TypeSyntax",
-                "doc": "The specified type."
-            }
-        ]
+      "name": "TypeSpecifierSyntax",
+      "doc": "Syntax for specifying a type of a parameter or a variable.",
+      "base": "SyntaxNode",
+      "fields": [
+        {
+          "name": "Colon",
+          "type": "SyntaxToken",
+          "doc": "The colon token."
+        },
+        {
+          "name": "Type",
+          "type": "TypeSyntax",
+          "doc": "The specified type."
+        }
+      ]
     },
     {
       "name": "BlockExpressionSyntax",
@@ -165,55 +167,55 @@
       ]
     },
     {
-        "name": "IdentifierSyntax",
-        "doc": "A simple identifier.",
-        "base": "TypeSyntax",
-        "fields": [
-            {
-                "name": "Identifier",
-                "type": "SyntaxToken",
-                "doc": "The identifier token."
-            }
-        ]
+      "name": "IdentifierSyntax",
+      "doc": "A simple identifier.",
+      "base": "TypeSyntax",
+      "fields": [
+        {
+          "name": "Identifier",
+          "type": "SyntaxToken",
+          "doc": "The identifier token."
+        }
+      ]
     },
     {
-        "name": "PrefixUnaryExpressionSyntax",
-        "doc": "A prefix unary expression.",
-        "base": "ExpressionSyntax",
-        "fields": [
-            {
-                "name": "Operator",
-                "type": "SyntaxToken",
-                "doc": "The operator token."
-            },
-            {
-                "name": "Operand",
-                "type": "ExpressionSyntax",
-                "doc": "The operand expression."
-            }
-        ]
+      "name": "PrefixUnaryExpressionSyntax",
+      "doc": "A prefix unary expression.",
+      "base": "ExpressionSyntax",
+      "fields": [
+        {
+          "name": "Operator",
+          "type": "SyntaxToken",
+          "doc": "The operator token."
+        },
+        {
+          "name": "Operand",
+          "type": "ExpressionSyntax",
+          "doc": "The operand expression."
+        }
+      ]
     },
     {
-        "name": "BinaryExpressionSyntax",
-        "doc": "A binary expression.",
-        "base": "ExpressionSyntax",
-        "fields": [
-            {
-                "name": "Left",
-                "type": "ExpressionSyntax",
-                "doc": "The left operand."
-            },
-            {
-                "name": "Operator",
-                "type": "SyntaxToken",
-                "doc": "The operator token."
-            },
-            {
-                "name": "Right",
-                "type": "ExpressionSyntax",
-                "doc": "The right operand."
-            }
-        ]
+      "name": "BinaryExpressionSyntax",
+      "doc": "A binary expression.",
+      "base": "ExpressionSyntax",
+      "fields": [
+        {
+          "name": "Left",
+          "type": "ExpressionSyntax",
+          "doc": "The left operand."
+        },
+        {
+          "name": "Operator",
+          "type": "SyntaxToken",
+          "doc": "The operator token."
+        },
+        {
+          "name": "Right",
+          "type": "ExpressionSyntax",
+          "doc": "The right operand."
+        }
+      ]
     }
   ]
 }
