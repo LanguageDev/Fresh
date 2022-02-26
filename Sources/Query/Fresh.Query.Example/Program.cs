@@ -8,48 +8,59 @@ using System.Threading.Tasks;
 namespace Fresh.Query.Example;
 
 [InputQueryGroup]
-internal partial interface INumberInputs
+public partial interface IInputService
 {
-    public int Steps { get; set; }
+    public string Var(string name);
 }
 
 [QueryGroup]
-internal partial interface IMathService
+public partial interface IMathService
 {
-    public int Fibonacci(int n);
-    public int Factorial(int n);
+    public int Fib(int n);
+    public int ParseVar(string name);
+    public int FibFromVar(string name);
 }
 
-internal class MathService : IMathService
+public sealed class MathService : IMathService
 {
-    private readonly INumberInputs inputs;
-    private readonly IMathService mathService;
+    private readonly IInputService input;
+    private readonly IMathService math;
 
-    public MathService(INumberInputs inputs, IMathService mathService)
+    public MathService(
+        IInputService input,
+        IMathService math)
     {
-        this.inputs = inputs;
-        this.mathService = mathService;
+        this.input = input;
+        this.math = math;
     }
 
-    public int Fibonacci(int n)
+    public int Fib(int n)
     {
-        Console.WriteLine($"Computing Fibonacci({n})");
-        return n switch
+        Console.WriteLine($"Start of Fib({n})");
+        var result = n switch
         {
             < 2 => 1,
-            _ => this.mathService.Fibonacci(n - 1) + this.mathService.Fibonacci(n - 2),
+            _ => this.math.Fib(n - 1) + this.math.Fib(n - 2),
         };
+        Console.WriteLine($"End of Fib({n})");
+        return result;
     }
 
-    public int Factorial(int n)
+    public int ParseVar(string name)
     {
-        var order = this.inputs.Steps;
-        Console.WriteLine($"Computing Factorial({n}) of order {order}");
-        return n switch
-        {
-            <= 1 => 1,
-            _ => n * this.mathService.Factorial(n - order),
-        };
+        Console.WriteLine($"Start of ParseVar(\"{name}\")");
+        var result = int.Parse(this.input.Var(name));
+        Console.WriteLine($"End of ParseVar(\"{name}\")");
+        return result;
+    }
+
+    public int FibFromVar(string name)
+    {
+        Console.WriteLine($"Start of FibFromVar(\"{name}\")");
+        var n = this.math.ParseVar(name);
+        var result = this.math.Fib(n);
+        Console.WriteLine($"End of FibFromVar(\"{name}\")");
+        return result;
     }
 }
 
@@ -58,27 +69,28 @@ internal class Program
     public static void Main(string[] args)
     {
         var host = CreateHostBuilder(args).Build();
-        var numbers = host.Services.GetRequiredService<INumberInputs>();
+        var numbers = host.Services.GetRequiredService<IInputService>();
         var math = host.Services.GetRequiredService<IMathService>();
 
-        Console.WriteLine($"Fibonacci(5) = {math.Fibonacci(5)}");
-        Console.WriteLine($"Fibonacci(10) = {math.Fibonacci(10)}");
+        numbers.SetVar("n", "5");
+        Console.WriteLine("=======================");
+        Console.WriteLine($"Fib(5) = {math.FibFromVar("n")}");
+        Console.WriteLine("=======================");
 
-        Console.WriteLine("Factorials of order 1");
-        numbers.Steps = 1;
-        Console.WriteLine($"Factorial(4) = {math.Factorial(4)}");
-        Console.WriteLine($"Factorial(6) = {math.Factorial(6)}");
-        Console.WriteLine("Factorials of order 2");
-        Console.WriteLine("Don't get weirder out by the random non-order 2 computations!");
-        Console.WriteLine("That is just the old results getting invalidated, because the dependent value 'Steps' changed!");
-        numbers.Steps = 2;
-        Console.WriteLine($"Factorial(4) = {math.Factorial(4)}");
-        Console.WriteLine($"Factorial(6) = {math.Factorial(6)}");
+        numbers.SetVar("n", "8");
+        Console.WriteLine("=======================");
+        Console.WriteLine($"Fib(8) = {math.FibFromVar("n")}");
+        Console.WriteLine("=======================");
+
+        numbers.SetVar("n", "8 ");
+        Console.WriteLine("=======================");
+        Console.WriteLine($"Fib(8) = {math.FibFromVar("n")}");
+        Console.WriteLine("=======================");
     }
 
     public static IHostBuilder CreateHostBuilder(string[] args) => Host
         .CreateDefaultBuilder(args)
         .ConfigureQuerySystem(system => system
-            .AddInputQueryGroup<INumberInputs>()
+            .AddInputQueryGroup<IInputService>()
             .AddQueryGroup<IMathService, MathService>());
 }
