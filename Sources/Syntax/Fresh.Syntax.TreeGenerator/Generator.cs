@@ -49,7 +49,6 @@ public sealed class Generator
     {
         // Emit namespace usings
         foreach (var u in this.tree.Usings) this.codeBuilder.AppendLine($"using {u};");
-        if (this.tree.Usings.Length > 0) this.codeBuilder.AppendLine();
 
         this.codeBuilder.AppendLine("#nullable enable");
 
@@ -65,7 +64,7 @@ public sealed class Generator
         // Emit extensions
         this.GenerateSyntaxNodeExtensions();
 
-        this.codeBuilder.AppendLine().AppendLine("#nullable restore").AppendLine();
+        this.codeBuilder.AppendLine("#nullable restore");
     }
 
     private void GenerateRedClass(NodeModel node)
@@ -84,7 +83,6 @@ public sealed class Generator
 
         // Green node
         this.GenerateGreenClass(node);
-        if (node.Fields.Length > 0) this.codeBuilder.AppendLine();
 
         // Properties
         foreach (var field in node.Fields)
@@ -136,7 +134,6 @@ public sealed class Generator
         }
 
         this.codeBuilder.AppendLine("}");
-        this.codeBuilder.AppendLine();
     }
 
     private void GenerateGreenClass(NodeModel node)
@@ -184,8 +181,6 @@ public sealed class Generator
         // Equals, GetHashCode, Children
         if (!node.IsAbstract)
         {
-            this.codeBuilder.AppendLine();
-
             // Equality
             this.codeBuilder.AppendLine($"public override bool Equals({this.tree.Root}.GreenNode? other) =>");
             this.codeBuilder.AppendLine($"other is GreenNode o");
@@ -245,9 +240,6 @@ public sealed class Generator
     {
         // Skip abstract nodes
         if (node.IsAbstract) return;
-
-        // A hack to leave a line between the methods
-        if (!ReferenceEquals(node, this.tree.Nodes.First(n => !n.IsAbstract))) this.codeBuilder.AppendLine();
 
         // We infer a nice method name
         var methodName = node.Name;
