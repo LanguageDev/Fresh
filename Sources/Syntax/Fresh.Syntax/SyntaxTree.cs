@@ -56,6 +56,7 @@ public partial struct SyntaxToken
     internal partial struct GreenNode
     {
         public TokenType Type => this.Token.Type;
+        public CommentGroup? Documentation => null;
     }
 
     /// <summary>
@@ -64,7 +65,7 @@ public partial struct SyntaxToken
     public TokenType Type => this.Green.Type;
 
     /// <inheritdoc/>
-    public CommentGroup? Documentation => null;
+    public CommentGroup? Documentation => this.Green.Documentation;
 
     /// <inheritdoc/>
     public IEnumerable<KeyValuePair<string, object?>> Children => this.Green.Children;

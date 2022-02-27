@@ -14,7 +14,7 @@ namespace Fresh.Syntax;
 /// </summary>
 public readonly partial struct SyntaxToken : ISyntaxElement, IEquatable<SyntaxToken>
 {
-    new internal readonly partial struct GreenNode : IEquatable<GreenNode>
+    new internal readonly partial struct GreenNode : ISyntaxElement, IEquatable<GreenNode>
     {
         public Sequence<Token> LeadingTrivia { get; }
 

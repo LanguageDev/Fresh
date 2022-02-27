@@ -153,7 +153,11 @@ public sealed class Generator
         // Bases
         var bases = new List<string>();
         if (node.Base is not null && !node.IsStruct) bases.Add($"{node.Base}.GreenNode");
-        if (node.IsStruct) bases.Add("IEquatable<GreenNode>");
+        if (node.IsStruct)
+        {
+            bases.Add("ISyntaxElement");
+            bases.Add("IEquatable<GreenNode>");
+        }
 
         this.codeBuilder.StartType(
             doc: null,
