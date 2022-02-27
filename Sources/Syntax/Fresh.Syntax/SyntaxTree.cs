@@ -13,6 +13,9 @@ using Fresh.Common;
 
 namespace Fresh.Syntax;
 
+#pragma warning disable CS0282
+#pragma warning disable CS0109
+
 /// <summary>
 /// Interface for any syntax element in the tree.
 /// </summary>
@@ -48,28 +51,11 @@ public readonly record struct CommentGroup(Sequence<Token> Comments);
 /// <summary>
 /// Represents a single token as the part of the syntax tree.
 /// </summary>
-public readonly record struct SyntaxToken : ISyntaxElement
+public partial struct SyntaxToken
 {
-    internal readonly record struct GreenNode(
-        Sequence<Token> LeadingTrivia,
-        Token Token,
-        Sequence<Token> TrailingTrivia) : ISyntaxElement
+    internal partial struct GreenNode
     {
         public TokenType Type => this.Token.Type;
-
-        public CommentGroup? Documentation => null;
-
-        public IEnumerable<KeyValuePair<string, object?>> Children
-        {
-            get
-            {
-                yield return new(nameof(this.LeadingTrivia), this.LeadingTrivia);
-                yield return new(nameof(this.Token), this.Token);
-                yield return new(nameof(this.TrailingTrivia), this.TrailingTrivia);
-            }
-        }
-
-        internal SyntaxToken ToRedNode(SyntaxNode? parent) => new(parent, this);
     }
 
     /// <summary>
@@ -78,34 +64,18 @@ public readonly record struct SyntaxToken : ISyntaxElement
     public TokenType Type => this.Green.Type;
 
     /// <inheritdoc/>
-    public Sequence<Token> LeadingTrivia => this.Green.LeadingTrivia;
-
-    /// <summary>
-    /// The token that is part of the syntax tree.
-    /// </summary>
-    public Token Token => this.Green.Token;
-
-    /// <inheritdoc/>
-    public Sequence<Token> TrailingTrivia => this.Green.TrailingTrivia;
-
-    /// <inheritdoc/>
-    public CommentGroup? Documentation => this.Green.Documentation;
+    public CommentGroup? Documentation => null;
 
     /// <inheritdoc/>
     public IEnumerable<KeyValuePair<string, object?>> Children => this.Green.Children;
 
     /// <summary>
-    /// The parent syntax node of this one.
+    /// The parent node of this token.
     /// </summary>
     public SyntaxNode? Parent { get; }
 
-    internal GreenNode Green { get; }
-
-    internal SyntaxToken(SyntaxNode? parent, GreenNode green)
-    {
-        this.Parent = parent;
-        this.Green = green;
-    }
+    /// <inheritdoc/>
+    public bool Equals(SyntaxToken other) => this.Green.Equals(other.Green);
 }
 
 /// <summary>
@@ -433,16 +403,7 @@ public partial class SyntaxFactory
     /// <param name="token">The represented token.</param>
     /// <returns>The constructed <see cref="SyntaxToken"/>.</returns>
     public static SyntaxToken Token(Token token) => Token(Sequence<Token>.Empty, token, Sequence<Token>.Empty);
-
-    /// <summary>
-    /// Creates a new <see cref="SyntaxToken"/>.
-    /// </summary>
-    /// <param name="leadingTrivia">The leading trivia of the token.</param>
-    /// <param name="token">The represented token.</param>
-    /// <param name="trailingTrivia">The trailing trivia of the token.</param>
-    /// <returns>The constructed <see cref="SyntaxToken"/>.</returns>
-    public static SyntaxToken Token(
-        Sequence<Token> leadingTrivia,
-        Token token,
-        Sequence<Token> trailingTrivia) => new(null, new(leadingTrivia, token, trailingTrivia));
 }
+
+#pragma warning restore CS0109
+#pragma warning restore CS0282

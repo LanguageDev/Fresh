@@ -42,6 +42,8 @@ public sealed class Generator
         // Emit namespace usings
         foreach (var u in this.tree.Usings) this.codeBuilder.Using(u);
 
+        this.codeBuilder.WriteLine("#pragma warning disable CS0109");
+        this.codeBuilder.WriteLine("#pragma warning disable CS0282");
         this.codeBuilder.NullableEnable();
 
         // Emit file-scoped namespace declaration, if one is specified
@@ -57,17 +59,21 @@ public sealed class Generator
         this.GenerateSyntaxNodeExtensions();
 
         this.codeBuilder.NullableRestore();
+        this.codeBuilder.WriteLine("#pragma warning restore CS0282");
+        this.codeBuilder.WriteLine("#pragma warning restore CS0109");
     }
 
     private void GenerateRedClass(NodeModel node)
     {
         // Modifiers
-        var modifiers = Modifiers.Public | Modifiers.Class;
+        var modifiers = Modifiers.Public;
+        if (!node.IsStruct) modifiers |= Modifiers.Class;
         if (node.IsAbstract) modifiers |= Modifiers.Abstract;
 
         // Bases
         var bases = new List<string>();
         if (node.Base is not null) bases.Add(node.Base);
+        if (node.IsStruct) bases.Add($"IEquatable<{node.Name}>");
 
         this.codeBuilder.StartType(
             doc: node.Doc,
@@ -140,12 +146,14 @@ public sealed class Generator
         }
 
         // Modifiers
-        var modifiers = Modifiers.Class;
+        Modifiers modifiers = 0;
+        if (!node.IsStruct) modifiers |= Modifiers.Class;
         if (node.IsAbstract) modifiers |= Modifiers.Abstract;
 
         // Bases
         var bases = new List<string>();
-        if (node.Base is not null) bases.Add($"{node.Base}.GreenNode");
+        if (node.Base is not null && !node.IsStruct) bases.Add($"{node.Base}.GreenNode");
+        if (node.IsStruct) bases.Add("IEquatable<GreenNode>");
 
         this.codeBuilder.StartType(
             doc: null,
@@ -181,7 +189,7 @@ public sealed class Generator
         {
             // Equality
             this.codeBuilder.Equals(
-                baseType: $"{this.tree.Root}.GreenNode",
+                baseType: node.IsStruct ? "GreenNode" : $"{this.tree.Root}.GreenNode",
                 node.Fields.Select(f => f.Name));
 
             // Hash
@@ -243,8 +251,16 @@ public sealed class Generator
         if (node.IsAbstract) return;
 
         // We infer a nice method name
-        var methodName = node.Name;
-        if (methodName.EndsWith("Syntax")) methodName = methodName[..^6];
+        string methodName;
+        if (node.FactoryHintName is not null)
+        {
+            methodName = node.FactoryHintName;
+        }
+        else
+        {
+            methodName = node.Name;
+            if (methodName.EndsWith("Syntax")) methodName = methodName[..^6];
+        }
 
         var fieldProjections = new List<string>();
         foreach (var field in node.Fields)

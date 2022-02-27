@@ -33,10 +33,12 @@ public record struct MemberInfo
 
 public sealed class CodeBuilder
 {
+    private sealed record class TypeInfo(Modifiers Modifiers, string Name);
+
     private static readonly string[] keywords = new[] { "operator" };
 
     private readonly StringBuilder builder = new();
-    private readonly Stack<string> typeStack = new();
+    private readonly Stack<TypeInfo> typeStack = new();
 
     public override string ToString() => SyntaxFactory
         .ParseCompilationUnit(this.builder.ToString())
@@ -87,8 +89,9 @@ public sealed class CodeBuilder
         {
             this.Write(modifiers.HasFlag(Modifiers.Abstract) ? "abstract " : "sealed ");
         }
+        if (!modifiers.HasFlag(Modifiers.Class)) this.Write("readonly ");
         this.Write("partial ");
-        this.Write(modifiers.HasFlag(Modifiers.Class) ? "class " : "readonly struct ");
+        this.Write(modifiers.HasFlag(Modifiers.Class) ? "class " : "struct ");
         this.Write(name);
         if (bases.Any())
         {
@@ -96,7 +99,7 @@ public sealed class CodeBuilder
             this.WriteLine(string.Join(", ", bases));
         }
         this.WriteLine("{");
-        this.typeStack.Push(name);
+        this.typeStack.Push(new(modifiers, name));
         return this;
     }
 
@@ -110,7 +113,7 @@ public sealed class CodeBuilder
     public CodeBuilder StartCtor(Modifiers modifiers, IEnumerable<MemberInfo> parameters)
     {
         // Doc
-        this.DocSummary($"Creates a new instance of the <see cref=\"{this.typeStack.Peek()}\"> type.");
+        this.DocSummary($"Creates a new instance of the <see cref=\"{this.typeStack.Peek().Name}\"> type.");
         foreach (var info in parameters)
         {
             if (info.Doc is not null) this.DocParam(info.Name, info.Doc);
@@ -118,7 +121,7 @@ public sealed class CodeBuilder
 
         // Actual definition
         this.Write(modifiers.HasFlag(Modifiers.Public) ? "public " : "internal ");
-        this.Write(this.typeStack.Peek());
+        this.Write(this.typeStack.Peek().Name);
         this.Write("(");
         this.Write(string.Join(", ", parameters.Select(p => $"{p.Type} {EscapeKeyword(p.Name)}")));
         this.WriteLine(")");
@@ -165,14 +168,22 @@ public sealed class CodeBuilder
         .WriteLine("}")
         .WriteLine("}");
 
-    public CodeBuilder Equals(string baseType, IEnumerable<string> props) => this
-        .InheritDoc()
-        .WriteLine($"public override bool Equals(object? other) => this.Equals(other as {baseType});")
-        .InheritDoc()
-        .WriteLine($"public override bool Equals([AllowNull] {baseType} other) =>")
-        .WriteLine($"other is {this.typeStack.Peek()} o")
-        .Write(string.Join("", props.Select(p => $"&& object.Equals(this.{p}, o.{p})")))
-        .WriteLine(";");
+    public CodeBuilder Equals(string baseType, IEnumerable<string> props)
+    {
+        var typeModifiers = this.typeStack.Peek().Modifiers;
+        var isClass = typeModifiers.HasFlag(Modifiers.Class);
+        var overrideSpec = isClass ? "override " : string.Empty;
+        var derive = isClass ? $"this.Equals(other as {baseType})" : $"other is {baseType} o && this.Equals(o)";
+        this
+            .InheritDoc()
+            .WriteLine($"public override bool Equals(object? other) => {derive};")
+            .InheritDoc()
+            .WriteLine($"public {overrideSpec}bool Equals([AllowNull] {baseType} other) =>")
+            .WriteLine($"other is {this.typeStack.Peek().Name} o")
+            .Write(string.Join("", props.Select(p => $"&& object.Equals(this.{p}, o.{p})")))
+            .WriteLine(";");
+        return this;
+    }
 
     public CodeBuilder HashCode(IEnumerable<string> props) => this
         .InheritDoc()
@@ -205,10 +216,12 @@ public sealed class CodeBuilder
 
     private CodeBuilder DumpNonTypeModifiers(Modifiers modifiers)
     {
+        var typeModifiers = this.typeStack.Peek().Modifiers;
+        var isClass = typeModifiers.HasFlag(Modifiers.Class);
         this.Write(modifiers.HasFlag(Modifiers.Public) ? "public " : "internal ");
         if (modifiers.HasFlag(Modifiers.Static)) this.Write("static ");
         if (modifiers.HasFlag(Modifiers.Abstract)) this.Write("abstract ");
-        if (modifiers.HasFlag(Modifiers.Override)) this.Write("override ");
+        if (isClass && modifiers.HasFlag(Modifiers.Override)) this.Write("override ");
         return this;
     }
 

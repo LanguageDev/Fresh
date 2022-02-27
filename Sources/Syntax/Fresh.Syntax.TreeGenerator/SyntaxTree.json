@@ -15,6 +15,30 @@
   ],
   "nodes": [
     {
+      "name": "SyntaxToken",
+      "isStruct": true,
+      "base": "ISyntaxElement",
+      "doc": "Represents a single token with trivia as part of the syntax tree.",
+      "factoryHintName": "Token",
+      "fields": [
+        {
+          "name": "LeadingTrivia",
+          "type": "Sequence<Token>",
+          "doc": "The trivia that comes before this token in the syntax tree."
+        },
+        {
+          "name": "Token",
+          "type": "Token",
+          "doc": "The token itself that is the significant part of the tree."
+        },
+        {
+          "name": "TrailingTrivia",
+          "type": "Sequence<Token>",
+          "doc": "The trivia that comes after this token in the syntax tree."
+        }
+      ]
+    },
+    {
       "name": "StatementSyntax",
       "doc": "The base for all statement syntax nodes.",
       "base": "SyntaxNode",

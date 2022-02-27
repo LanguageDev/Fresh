@@ -26,6 +26,8 @@ public sealed class NodeModel
     public string? Doc { get; set; }
     public string? Base { get; set; }
     public bool IsAbstract { get; set; } = false;
+    public bool IsStruct { get; set; } = false;
+    public string? FactoryHintName { get; set; }
     public FieldModel[] Fields { get; set; } = Array.Empty<FieldModel>();
 }
 

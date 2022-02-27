@@ -5,8 +5,82 @@ using System.Linq;
 using System.Text;
 using Fresh.Common;
 
+#pragma warning disable CS0109
+#pragma warning disable CS0282
 #nullable enable
 namespace Fresh.Syntax;
+/// <summary>
+/// Represents a single token with trivia as part of the syntax tree.
+/// </summary>
+public readonly partial struct SyntaxToken : ISyntaxElement, IEquatable<SyntaxToken>
+{
+    new internal readonly partial struct GreenNode : IEquatable<GreenNode>
+    {
+        public Sequence<Token> LeadingTrivia { get; }
+
+        public Token Token { get; }
+
+        public Sequence<Token> TrailingTrivia { get; }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref = "GreenNode"> type.
+        /// </summary>
+        public GreenNode(Sequence<Token> leadingTrivia, Token token, Sequence<Token> trailingTrivia)
+        {
+            this.LeadingTrivia = leadingTrivia;
+            this.Token = token;
+            this.TrailingTrivia = trailingTrivia;
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object? other) => other is GreenNode o && this.Equals(o);
+        /// <inheritdoc/>
+        public bool Equals([AllowNull] GreenNode other) => other is GreenNode o && object.Equals(this.LeadingTrivia, o.LeadingTrivia) && object.Equals(this.Token, o.Token) && object.Equals(this.TrailingTrivia, o.TrailingTrivia);
+        /// <inheritdoc/>
+        public override int GetHashCode() => HashCode.Combine(this.LeadingTrivia, this.Token, this.TrailingTrivia);
+        public IEnumerable<KeyValuePair<string, object?>> Children
+        {
+            get
+            {
+                yield return new(nameof(this.LeadingTrivia), this.LeadingTrivia);
+                yield return new(nameof(this.Token), this.Token);
+                yield return new(nameof(this.TrailingTrivia), this.TrailingTrivia);
+            }
+        }
+
+        public SyntaxToken ToRedNode(SyntaxNode? parent) => new(parent, this);
+    }
+
+    /// <summary>
+    /// The trivia that comes before this token in the syntax tree.
+    /// </summary>
+    public Sequence<Token> LeadingTrivia => this.Green.LeadingTrivia;
+    /// <summary>
+    /// The token itself that is the significant part of the tree.
+    /// </summary>
+    public Token Token => this.Green.Token;
+    /// <summary>
+    /// The trivia that comes after this token in the syntax tree.
+    /// </summary>
+    public Sequence<Token> TrailingTrivia => this.Green.TrailingTrivia;
+    internal GreenNode Green { get; }
+
+    /// <summary>
+    /// Creates a new instance of the <see cref = "SyntaxToken"> type.
+    /// </summary>
+    /// <param name = "parent">
+    /// The parent node of this one.
+    /// </param>
+    /// <param name = "green">
+    /// The wrapped green node.
+    /// </param>
+    internal SyntaxToken(SyntaxNode? parent, GreenNode green)
+    {
+        this.Parent = parent;
+        this.Green = green;
+    }
+}
+
 /// <summary>
 /// The base for all statement syntax nodes.
 /// </summary>
@@ -681,6 +755,22 @@ public sealed partial class BinaryExpressionSyntax : ExpressionSyntax
 public static partial class SyntaxFactory
 {
     /// <summary>
+    /// Constructs a <see cref = "SyntaxToken"/> from the given arguments.
+    /// </summary>
+    /// <param name = "leadingTrivia">
+    /// The trivia that comes before this token in the syntax tree.
+    /// </param>
+    /// <param name = "token">
+    /// The token itself that is the significant part of the tree.
+    /// </param>
+    /// <param name = "trailingTrivia">
+    /// The trivia that comes after this token in the syntax tree.
+    /// </param>
+    /// <returns>
+    /// The constructed syntax node.
+    /// </returns>
+    public static SyntaxToken Token(Sequence<Token> leadingTrivia, Token token, Sequence<Token> trailingTrivia) => new(null, new(leadingTrivia, token, trailingTrivia));
+    /// <summary>
     /// Constructs a <see cref = "ModuleDeclarationSyntax"/> from the given arguments.
     /// </summary>
     /// <param name = "declarations">
@@ -814,3 +904,5 @@ public static partial class SyntaxFactory
     public static BinaryExpressionSyntax BinaryExpression(ExpressionSyntax left, SyntaxToken @operator, ExpressionSyntax right) => new(null, new(left.Green, @operator.Green, right.Green));
 }
 #nullable restore
+#pragma warning restore CS0282
+#pragma warning restore CS0109
