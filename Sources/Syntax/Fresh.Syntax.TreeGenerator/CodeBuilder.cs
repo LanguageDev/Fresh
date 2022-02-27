@@ -20,6 +20,15 @@ public enum Modifiers
     Abstract = 0b00000010,
     Public   = 0b00000100,
     Override = 0b00001000,
+    Static   = 0b00010000,
+}
+
+public record struct MemberInfo
+{
+    public string Name { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
+    public string? Doc { get; set; } = null;
+    public string Value { get; set; } = string.Empty;
 }
 
 public sealed class CodeBuilder
@@ -68,15 +77,20 @@ public sealed class CodeBuilder
 
     public CodeBuilder DocReturns(string text) => this.Doc("returns", text);
 
-    public CodeBuilder StartType(Modifiers modifiers, string name, params string[] bases)
+    public CodeBuilder StartType(string? doc, Modifiers modifiers, string name, IEnumerable<string> bases)
     {
+        if (doc is not null) this.DocSummary(doc);
         if (this.typeStack.Count > 0) this.Write("new ");
         this.Write(modifiers.HasFlag(Modifiers.Public) ? "public " : "internal ");
-        if (modifiers.HasFlag(Modifiers.Class)) this.Write(modifiers.HasFlag(Modifiers.Abstract) ? "abstract " : "sealed ");
+        if (modifiers.HasFlag(Modifiers.Static)) this.Write("static ");
+        if (modifiers.HasFlag(Modifiers.Class) && !modifiers.HasFlag(Modifiers.Static))
+        {
+            this.Write(modifiers.HasFlag(Modifiers.Abstract) ? "abstract " : "sealed ");
+        }
         this.Write("partial ");
         this.Write(modifiers.HasFlag(Modifiers.Class) ? "class " : "readonly struct ");
         this.Write(name);
-        if (bases.Length > 0)
+        if (bases.Any())
         {
             this.Write(" : ");
             this.WriteLine(string.Join(", ", bases));
@@ -93,11 +107,14 @@ public sealed class CodeBuilder
         return this;
     }
 
-    public CodeBuilder StartCtor(Modifiers modifiers, IEnumerable<(string Name, string Type, string Doc)> parameters)
+    public CodeBuilder StartCtor(Modifiers modifiers, IEnumerable<MemberInfo> parameters)
     {
         // Doc
         this.DocSummary($"Creates a new instance of the <see cref=\"{this.typeStack.Peek()}\"> type.");
-        foreach (var (name, _, doc) in parameters) this.DocParam(name, doc);
+        foreach (var info in parameters)
+        {
+            if (info.Doc is not null) this.DocParam(info.Name, info.Doc);
+        }
 
         // Actual definition
         this.Write(modifiers.HasFlag(Modifiers.Public) ? "public " : "internal ");
@@ -111,29 +128,38 @@ public sealed class CodeBuilder
 
     public CodeBuilder EndCtor() => this.WriteLine("}");
 
-    public CodeBuilder TrivialCtor(Modifiers modifiers, IEnumerable<(string Name, string Type, string Doc)> parameters)
+    public CodeBuilder TrivialCtor(Modifiers modifiers, IEnumerable<MemberInfo> parameters)
     {
-        this.StartCtor(modifiers, parameters.Select(p => (ToCamelCase(p.Name), p.Type, p.Doc)));
-        foreach (var (n, _, _) in parameters) this.WriteLine($"this.{n} = {EscapeKeyword(ToCamelCase(n))}");
+        this.StartCtor(modifiers, parameters.Select(p => p with { Name = ToCamelCase(p.Name) }));
+        foreach (var p in parameters) this.WriteLine($"this.{p.Name} = {EscapeKeyword(ToCamelCase(p.Name))};");
         this.EndCtor();
         return this;
     }
 
-    public CodeBuilder AutoGetterProp(Modifiers modifiers, string name, string type, string doc) => this
-        .DocSummary(doc)
-        .DumpNonTypeModifiers(modifiers)
-        .WriteLine($"{type} {name} {{ get; }}");
+    public CodeBuilder AutoGetterProp(string? doc, Modifiers modifiers, string type, string name)
+    {
+        if (doc is not null) this.DocSummary(doc);
+        return this
+            .DumpNonTypeModifiers(modifiers)
+            .WriteLine($"{type} {name} {{ get; }}");
+    }
 
-    public CodeBuilder ArrowProp(Modifiers modifiers, string name, string type, string doc, string value) => this
-        .DocSummary(doc)
-        .DumpNonTypeModifiers(modifiers)
-        .WriteLine($"{type} {name} => {value};");
+    public CodeBuilder ArrowProp(string? doc, Modifiers modifiers, string type, string name, string value)
+    {
+        if (doc is not null) this.DocSummary(doc);
+        return this
+            .DumpNonTypeModifiers(modifiers)
+            .WriteLine($"{type} {name} => {value};");
+    }
 
-    public CodeBuilder StartGetterProp(Modifiers modifiers, string name, string type, string doc) => this
-        .DocSummary(doc)
-        .DumpNonTypeModifiers(modifiers)
-        .WriteLine($"{type} {name} {{")
-        .WriteLine("get {");
+    public CodeBuilder StartGetterProp(string? doc, Modifiers modifiers, string type, string name)
+    {
+        if (doc is not null) this.DocSummary(doc);
+        return this
+            .DumpNonTypeModifiers(modifiers)
+            .WriteLine($"{type} {name} {{")
+            .WriteLine("get {");
+    }
 
     public CodeBuilder EndGetterProp() => this
         .WriteLine("}")
@@ -143,8 +169,8 @@ public sealed class CodeBuilder
         .InheritDoc()
         .WriteLine($"public override bool Equals(object? other) => this.Equals(other as {baseType});")
         .InheritDoc()
-        .WriteLine($"public override bool Equals([MaybeNull] {baseType} other) =>")
-        .WriteLine($"other is {baseType} o")
+        .WriteLine($"public override bool Equals([AllowNull] {baseType} other) =>")
+        .WriteLine($"other is {this.typeStack.Peek()} o")
         .Write(string.Join("", props.Select(p => $"&& object.Equals(this.{p}, o.{p})")))
         .WriteLine(";");
 
@@ -155,21 +181,24 @@ public sealed class CodeBuilder
         .WriteLine(");");
 
     public CodeBuilder ArrowMethod(
-        string summary,
+        string? doc,
         Modifiers modifiers,
-        (string Type, string Doc) ret,
+        MemberInfo ret,
         string name,
-        IEnumerable<(string Name, string Type, string Doc)> parameters,
+        IEnumerable<MemberInfo> parameters,
         string? body)
     {
-        this.DocSummary(summary);
-        foreach (var (n, _, doc) in parameters) this.DocParam(n, doc);
-        this.DocReturns(ret.Doc);
+        if (doc is not null) this.DocSummary(doc);
+        foreach (var p in parameters)
+        {
+            if (doc is not null && p.Doc is not null) this.DocParam(p.Name, p.Doc);
+        }
+        if (doc is not null && ret.Doc is not null) this.DocReturns(ret.Doc);
         this.DumpNonTypeModifiers(modifiers);
         this.Write($"{ret.Type} {name}(");
         this.Write(string.Join(", ", parameters.Select(p => $"{p.Type} {p.Name}")));
         this.Write(")");
-        if(body is not null) this.Write($" => {body}");
+        if (body is not null) this.Write($" => {body}");
         this.WriteLine(";");
         return this;
     }
@@ -177,6 +206,7 @@ public sealed class CodeBuilder
     private CodeBuilder DumpNonTypeModifiers(Modifiers modifiers)
     {
         this.Write(modifiers.HasFlag(Modifiers.Public) ? "public " : "internal ");
+        if (modifiers.HasFlag(Modifiers.Static)) this.Write("static ");
         if (modifiers.HasFlag(Modifiers.Abstract)) this.Write("abstract ");
         if (modifiers.HasFlag(Modifiers.Override)) this.Write("override ");
         return this;

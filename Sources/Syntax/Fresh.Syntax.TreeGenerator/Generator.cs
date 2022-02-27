@@ -20,18 +20,10 @@ public sealed class Generator
     {
         var generator = new Generator(treeModel);
         generator.GenerateCode();
-        var text = generator.codeBuilder.ToString();
-        return SyntaxFactory
-            .ParseCompilationUnit(text)
-            .NormalizeWhitespace()
-            .GetText()
-            .ToString();
+        return generator.codeBuilder.ToString();
     }
 
-    private const int indentSize = 2;
-    private static readonly string[] keywords = new[] { "operator" };
-
-    private readonly StringBuilder codeBuilder = new();
+    private readonly CodeBuilder codeBuilder = new();
     private readonly TreeModel tree;
     private readonly HashSet<string> allNodeNames;
 
@@ -48,12 +40,12 @@ public sealed class Generator
     public void GenerateCode()
     {
         // Emit namespace usings
-        foreach (var u in this.tree.Usings) this.codeBuilder.AppendLine($"using {u};");
+        foreach (var u in this.tree.Usings) this.codeBuilder.Using(u);
 
-        this.codeBuilder.AppendLine("#nullable enable");
+        this.codeBuilder.NullableEnable();
 
         // Emit file-scoped namespace declaration, if one is specified
-        if (this.tree.Namespace is not null) this.codeBuilder.AppendLine($"namespace {this.tree.Namespace};");
+        if (this.tree.Namespace is not null) this.codeBuilder.Namespace(this.tree.Namespace);
 
         // Emit class definitions
         foreach (var node in this.tree.Nodes) this.GenerateRedClass(node);
@@ -64,22 +56,24 @@ public sealed class Generator
         // Emit extensions
         this.GenerateSyntaxNodeExtensions();
 
-        this.codeBuilder.AppendLine("#nullable restore");
+        this.codeBuilder.NullableRestore();
     }
 
     private void GenerateRedClass(NodeModel node)
     {
-        var extModifier = node.IsAbstract ? "abstract" : "sealed";
-        var baseModifier = node.Base is null ? string.Empty : $" : {node.Base}";
+        // Modifiers
+        var modifiers = Modifiers.Public | Modifiers.Class;
+        if (node.IsAbstract) modifiers |= Modifiers.Abstract;
 
-        if (node.Doc is not null)
-        {
-            this.codeBuilder.AppendLine("/// <summary>");
-            this.codeBuilder.AppendLine($"/// {node.Doc}");
-            this.codeBuilder.AppendLine("/// </summary>");
-        }
-        this.codeBuilder.AppendLine($"public {extModifier} partial class {node.Name}{baseModifier}");
-        this.codeBuilder.AppendLine("{");
+        // Bases
+        var bases = new List<string>();
+        if (node.Base is not null) bases.Add(node.Base);
+
+        this.codeBuilder.StartType(
+            doc: node.Doc,
+            modifiers: modifiers,
+            name: node.Name,
+            bases: bases);
 
         // Green node
         this.GenerateGreenClass(node);
@@ -87,14 +81,6 @@ public sealed class Generator
         // Properties
         foreach (var field in node.Fields)
         {
-            // Doc comment
-            if (field.Doc is not null)
-            {
-                this.codeBuilder.AppendLine("/// <summary>");
-                this.codeBuilder.AppendLine($"/// {field.Doc}");
-                this.codeBuilder.AppendLine("/// </summary>");
-            }
-
             // Property itself
             var fieldType = field.Type;
             var accessor = $"this.Green.{field.Name}";
@@ -109,31 +95,37 @@ public sealed class Generator
                 accessor = $"{accessor}.ToRedNode(this)";
             }
             if (field.IsOptional) fieldType = $"{fieldType}?";
-            this.codeBuilder.AppendLine($"public {fieldType} {field.Name} => {accessor};");
+            this.codeBuilder.ArrowProp(
+                doc: field.Doc,
+                modifiers: Modifiers.Public,
+                type: fieldType,
+                name: field.Name,
+                value: accessor);
         }
 
         // Green node property
-        if (node.IsAbstract)
-        {
-            this.codeBuilder.AppendLine($"internal abstract override GreenNode Green {{ get; }}");
-        }
-        else
-        {
-            this.codeBuilder.AppendLine($"internal override GreenNode Green {{ get; }}");
-        }
+        modifiers = Modifiers.Override;
+        if (node.IsAbstract) modifiers |= Modifiers.Abstract;
+        this.codeBuilder.AutoGetterProp(
+            doc: null,
+            modifiers: modifiers,
+            type: "GreenNode",
+            name: "Green");
 
         // Constructor
         if (!node.IsAbstract)
         {
             // Ctor itself
-            this.codeBuilder.AppendLine($"internal {node.Name}({this.tree.Root}? parent, GreenNode green)");
-            this.codeBuilder.AppendLine("{");
-            this.codeBuilder.AppendLine("this.Parent = parent;");
-            this.codeBuilder.AppendLine("this.Green = green;");
-            this.codeBuilder.AppendLine("}");
+            this.codeBuilder.TrivialCtor(
+                modifiers: 0,
+                parameters: new[]
+                {
+                    new MemberInfo { Name = "Parent", Type = $"{this.tree.Root}?", Doc = "The parent node of this one." },
+                    new MemberInfo { Name = "Green", Type = "GreenNode", Doc = "The wrapped green node." },
+                });
         }
 
-        this.codeBuilder.AppendLine("}");
+        this.codeBuilder.EndType();
     }
 
     private void GenerateGreenClass(NodeModel node)
@@ -147,97 +139,106 @@ public sealed class Generator
             return fieldType;
         }
 
-        var extModifier = node.IsAbstract ? "abstract" : "sealed";
-        var baseModifier = node.Base is null ? string.Empty : $" : {node.Base}.GreenNode";
-        this.codeBuilder.AppendLine($"new internal {extModifier} partial class GreenNode{baseModifier}");
-        this.codeBuilder.AppendLine("{");
+        // Modifiers
+        var modifiers = Modifiers.Class;
+        if (node.IsAbstract) modifiers |= Modifiers.Abstract;
+
+        // Bases
+        var bases = new List<string>();
+        if (node.Base is not null) bases.Add($"{node.Base}.GreenNode");
+
+        this.codeBuilder.StartType(
+            doc: null,
+            modifiers: modifiers,
+            name: "GreenNode",
+            bases: bases);
 
         // Properties
         foreach (var field in node.Fields)
         {
-            // Property itself
-            this.codeBuilder.AppendLine($"public {ToGreenPropertyType(field)} {field.Name} {{ get; }}");
+            this.codeBuilder.AutoGetterProp(
+                doc: null,
+                modifiers: Modifiers.Public,
+                type: ToGreenPropertyType(field),
+                name: field.Name);
         }
 
         // Constructor
         if (!node.IsAbstract)
         {
             // Ctor itself
-            this.codeBuilder.AppendLine($"public GreenNode(");
-            foreach (var field in node.Fields)
-            {
-                this.codeBuilder.Append($"{ToGreenPropertyType(field)} {ToCamelCase(field.Name)}");
-                if (!ReferenceEquals(field, node.Fields[^1])) this.codeBuilder.AppendLine(",");
-            }
-            this.codeBuilder.AppendLine(")");
-            this.codeBuilder.AppendLine("{");
-            foreach (var field in node.Fields)
-            {
-                this.codeBuilder.AppendLine($"this.{field.Name} = {ToCamelCase(field.Name)};");
-            }
-            this.codeBuilder.AppendLine("}");
+            this.codeBuilder.TrivialCtor(
+                modifiers: Modifiers.Public,
+                parameters: node.Fields.Select(f => new MemberInfo
+                {
+                    Name = f.Name,
+                    Type = ToGreenPropertyType(f),
+                }));
         }
 
         // Equals, GetHashCode, Children
         if (!node.IsAbstract)
         {
             // Equality
-            this.codeBuilder.AppendLine($"public override bool Equals({this.tree.Root}.GreenNode? other) =>");
-            this.codeBuilder.AppendLine($"other is GreenNode o");
-            foreach (var field in node.Fields)
-            {
-                this.codeBuilder.Append($"&& object.Equals(this.{field.Name}, o.{field.Name})");
-            }
-            this.codeBuilder.AppendLine(";");
+            this.codeBuilder.Equals(
+                baseType: $"{this.tree.Root}.GreenNode",
+                node.Fields.Select(f => f.Name));
 
             // Hash
-            this.codeBuilder.AppendLine("public override int GetHashCode() => HashCode.Combine(");
-            foreach (var field in node.Fields)
-            {
-                this.codeBuilder.Append($"this.{field.Name}");
-                if (!ReferenceEquals(field, node.Fields[^1])) this.codeBuilder.Append(',');
-            }
-            this.codeBuilder.AppendLine(");");
+            this.codeBuilder.HashCode(node.Fields.Select(f => f.Name));
 
             // Children
-            this.codeBuilder.AppendLine("public override IEnumerable<KeyValuePair<string, object?>> Children");
-            this.codeBuilder.AppendLine("{");
-            this.codeBuilder.AppendLine("get");
-            this.codeBuilder.AppendLine("{");
+            this.codeBuilder.StartGetterProp(
+                doc: null,
+                modifiers: Modifiers.Public | Modifiers.Override,
+                type: "IEnumerable<KeyValuePair<string, object?>>",
+                name: "Children");
             foreach (var field in node.Fields)
             {
-                this.codeBuilder.AppendLine($"yield return new(\"{field.Name}\", this.{field.Name});");
+                this.codeBuilder.WriteLine($"yield return new(nameof(this.{field.Name}), this.{field.Name});");
             }
-            this.codeBuilder.AppendLine("}");
-            this.codeBuilder.AppendLine("}");
+            this.codeBuilder.EndGetterProp();
         }
 
         // To red node
-        if (node.IsAbstract)
-        {
-            this.codeBuilder.AppendLine($"public abstract override {node.Name} ToRedNode({this.tree.Root}? parent);");
-        }
-        else
-        {
-            this.codeBuilder.AppendLine($"public override {node.Name} ToRedNode({this.tree.Root}? parent) => new(parent, this);");
-        }
+        modifiers = Modifiers.Public | Modifiers.Override;
+        if (node.IsAbstract) modifiers |= Modifiers.Abstract;
+        this.codeBuilder.ArrowMethod(
+            doc: null,
+            modifiers: modifiers,
+            ret: new MemberInfo { Type = node.Name },
+            name: "ToRedNode",
+            parameters: new[] { new MemberInfo { Name = "parent", Type = $"{this.tree.Root}?" } },
+            body: node.IsAbstract ? null : "new(parent, this)");
 
-        this.codeBuilder.AppendLine("}");
+        this.codeBuilder.EndType();
     }
 
     private void GenerateFactory()
     {
-        this.codeBuilder.AppendLine("/// <summary>");
-        this.codeBuilder.AppendLine("/// Provides factory methods for the syntax nodes.");
-        this.codeBuilder.AppendLine("/// </summary>");
-        this.codeBuilder.AppendLine($"public static partial class {this.tree.Factory}");
-        this.codeBuilder.AppendLine("{");
+        if (this.tree.Factory is null) return;
+
+        this.codeBuilder.StartType(
+            doc: "Provides factory methods for the syntax nodes.",
+            modifiers: Modifiers.Public | Modifiers.Static | Modifiers.Class,
+            name: this.tree.Factory,
+            bases: Enumerable.Empty<string>());
+
         foreach (var node in this.tree.Nodes) this.GenerateFactory(node);
-        this.codeBuilder.AppendLine("}");
+
+        this.codeBuilder.EndType();
     }
 
     private void GenerateFactory(NodeModel node)
     {
+        string ToParameterType(FieldModel field)
+        {
+            var fieldType = field.Type;
+            if (this.IsNodeSequence(fieldType, out var elementType)) fieldType = $"IEnumerable<{elementType}>";
+            if (field.IsOptional) fieldType = $"{fieldType}?";
+            return fieldType;
+        }
+
         // Skip abstract nodes
         if (node.IsAbstract) return;
 
@@ -245,23 +246,10 @@ public sealed class Generator
         var methodName = node.Name;
         if (methodName.EndsWith("Syntax")) methodName = methodName[..^6];
 
-        this.codeBuilder.AppendLine("/// <summary>");
-        this.codeBuilder.AppendLine($"/// Constructs a <see cref=\"{node.Name}\"/> from the given arguments.");
-        this.codeBuilder.AppendLine("/// </summary>");
-        foreach (var field in node.Fields) this.codeBuilder.AppendLine($"/// <param name=\"{ToCamelCase(field.Name)}\">{field.Doc}</param>");
-        this.codeBuilder.AppendLine($"public static {node.Name} {methodName}(");
+        var fieldProjections = new List<string>();
         foreach (var field in node.Fields)
         {
-            var fieldType = field.Type;
-            if (this.IsNodeSequence(fieldType, out var elementType)) fieldType = $"IEnumerable<{elementType}>";
-            if (field.IsOptional) fieldType = $"{fieldType}?";
-            this.codeBuilder.Append($"{fieldType} {ToCamelCase(field.Name)}");
-            if (!ReferenceEquals(field, node.Fields[^1])) this.codeBuilder.AppendLine(",");
-        }
-        this.codeBuilder.AppendLine($") => new(null, new(");
-        foreach (var field in node.Fields)
-        {
-            var fieldRef = ToCamelCase(field.Name);
+            var fieldRef = CodeBuilder.EscapeKeyword(CodeBuilder.ToCamelCase(field.Name));
             if (this.IsNodeSequence(field.Type, out var elementType))
             {
                 fieldRef = $"{fieldRef}.Select(n => n.Green).ToSequence()";
@@ -271,14 +259,26 @@ public sealed class Generator
                 if (field.IsOptional) fieldRef = $"{fieldRef}?";
                 fieldRef = $"{fieldRef}.Green";
             }
-            this.codeBuilder.Append($"{fieldRef}");
-            if (!ReferenceEquals(field, node.Fields[^1])) this.codeBuilder.AppendLine(",");
+            fieldProjections.Add(fieldRef);
         }
-        this.codeBuilder.AppendLine("));");
+
+        this.codeBuilder.ArrowMethod(
+            doc: $"Constructs a <see cref=\"{node.Name}\"/> from the given arguments.",
+            modifiers: Modifiers.Public | Modifiers.Static,
+            ret: new MemberInfo() { Type = node.Name, Doc = "The constructed syntax node." },
+            name: methodName,
+            parameters: node.Fields.Select(f => new MemberInfo
+            {
+                Name = CodeBuilder.EscapeKeyword(CodeBuilder.ToCamelCase(f.Name)),
+                Type = ToParameterType(f),
+                Doc = f.Doc,
+            }),
+            body: $"new(null, new({string.Join(", ", fieldProjections)}))");
     }
 
     private void GenerateSyntaxNodeExtensions()
     {
+#if false
         this.codeBuilder.AppendLine("/// <summary>");
         this.codeBuilder.AppendLine("/// Provides extension methods for the syntax nodes.");
         this.codeBuilder.AppendLine("/// </summary>");
@@ -286,6 +286,7 @@ public sealed class Generator
         this.codeBuilder.AppendLine("{");
         foreach (var node in this.tree.Nodes) this.GenerateSyntaxNodeExtensions(node);
         this.codeBuilder.AppendLine("}");
+#endif
     }
 
     private void GenerateSyntaxNodeExtensions(NodeModel node)
@@ -308,12 +309,5 @@ public sealed class Generator
         }
         elementType = type[9..^1];
         return this.allNodeNames.Contains(elementType);
-    }
-
-    private static string ToCamelCase(string name)
-    {
-        var result = $"{char.ToLower(name[0])}{name[1..]}";
-        if (keywords.Contains(result)) result = $"@{result}";
-        return result;
     }
 }

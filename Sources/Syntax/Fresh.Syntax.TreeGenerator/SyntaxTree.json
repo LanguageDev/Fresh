@@ -2,6 +2,7 @@
   "usings": [
     "System",
     "System.Collections.Generic",
+    "System.Diagnostics.CodeAnalysis",
     "System.Linq",
     "System.Text",
     "Fresh.Common"
