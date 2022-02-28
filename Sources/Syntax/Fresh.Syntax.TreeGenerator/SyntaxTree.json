@@ -10,9 +10,7 @@
   "namespace": "Fresh.Syntax",
   "factory": "SyntaxFactory",
   "root": "SyntaxNode",
-  "builtins": [
-    "SyntaxToken"
-  ],
+  "builtins": [],
   "nodes": [
     {
       "name": "SyntaxToken",
