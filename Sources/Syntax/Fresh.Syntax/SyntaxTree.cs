@@ -118,6 +118,53 @@ public readonly struct SyntaxSequence<TElement> : IReadOnlyList<TElement>
 }
 
 /// <summary>
+/// Represents an enclosed piece of syntax between a pair of balanced tokens (like parentheses).
+/// </summary>
+/// <typeparam name="TElement">The element type that is enclosed.</typeparam>
+public readonly struct EnclosedSyntax<TElement>
+    where TElement : ISyntaxElement
+{
+    // TODO: Green node
+    // TODO: Project to green node
+
+    /// <summary>
+    /// The opening token.
+    /// </summary>
+    public SyntaxToken Open { get; }
+
+    /// <summary>
+    /// The enclosed element.
+    /// </summary>
+    public TElement Element { get; }
+
+    /// <summary>
+    /// The closing token.
+    /// </summary>
+    public SyntaxToken Close { get; }
+}
+
+/// <summary>
+/// Represents a piece of syntax with an optional punctuation.
+/// </summary>
+/// <typeparam name="TElement">The element type that is punctuation.</typeparam>
+public readonly struct PunctuatedSyntax<TElement>
+    where TElement : ISyntaxElement
+{
+    // TODO: Green node
+    // TODO: Project to green node
+
+    /// <summary>
+    /// The punctuated element.
+    /// </summary>
+    public TElement Element { get; }
+
+    /// <summary>
+    /// The punctuation mark.
+    /// </summary>
+    public SyntaxToken Punctuation { get; }
+}
+
+/// <summary>
 /// The base for all syntax tree nodes.
 /// </summary>
 public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
