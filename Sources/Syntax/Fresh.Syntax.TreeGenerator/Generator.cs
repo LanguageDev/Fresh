@@ -92,8 +92,7 @@ public sealed class Generator
             var accessor = $"this.Green.{field.Name}";
             if (this.IsNodeSequence(fieldType, out var elementType))
             {
-                fieldType = $"Syntax{fieldType}";
-                accessor = $"new({accessor}, n => ({elementType})n.ToRedNode(this))";
+                accessor = $"new({accessor}.Underlying, n => ({elementType})(({elementType}.GreenNode)n).ToRedNode(this))";
             }
             else if (this.allNodeNames.Contains(fieldType))
             {
@@ -139,7 +138,7 @@ public sealed class Generator
         string ToGreenPropertyType(FieldModel field)
         {
             var fieldType = this.IsNodeSequence(field.Type, out var elementType)
-                ? $"Sequence<{elementType}.GreenNode>" : this.allNodeNames.Contains(field.Type)
+                ? $"SyntaxSequence<{elementType}.GreenNode>" : this.allNodeNames.Contains(field.Type)
                 ? $"{field.Type}.GreenNode" : field.Type;
             if (field.IsOptional) fieldType = $"{fieldType}?";
             return fieldType;
@@ -272,7 +271,7 @@ public sealed class Generator
             var fieldRef = CodeBuilder.EscapeKeyword(CodeBuilder.ToCamelCase(field.Name));
             if (this.IsNodeSequence(field.Type, out var elementType))
             {
-                fieldRef = $"{fieldRef}.Select(n => n.Green).ToSequence()";
+                fieldRef = $"SyntaxSequence({fieldRef}.Select(n => n.Green))";
             }
             else if (this.allNodeNames.Contains(field.Type))
             {
@@ -322,12 +321,12 @@ public sealed class Generator
 
     private bool IsNodeSequence(string type, [MaybeNullWhen(false)] out string elementType)
     {
-        if (!type.StartsWith("Sequence<"))
+        if (!type.StartsWith("SyntaxSequence<"))
         {
             elementType = null;
             return false;
         }
-        elementType = type[9..^1];
+        elementType = type[15..^1];
         return this.allNodeNames.Contains(elementType);
     }
 }

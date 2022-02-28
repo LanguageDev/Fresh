@@ -67,7 +67,7 @@
       "fields": [
         {
           "name": "Declarations",
-          "type": "Sequence<DeclarationSyntax>",
+          "type": "SyntaxSequence<DeclarationSyntax>",
           "doc": "The declarations contained in the module."
         },
         {
@@ -122,7 +122,7 @@
         },
         {
           "name": "Parameters",
-          "type": "Sequence<ParameterSyntax>",
+          "type": "SyntaxSequence<ParameterSyntax>",
           "doc": "The parameters of the function."
         },
         {

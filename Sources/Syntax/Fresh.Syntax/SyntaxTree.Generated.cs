@@ -140,14 +140,14 @@ public sealed partial class ModuleDeclarationSyntax : DeclarationSyntax
 {
     new internal sealed partial class GreenNode : DeclarationSyntax.GreenNode
     {
-        public Sequence<DeclarationSyntax.GreenNode> Declarations { get; }
+        public SyntaxSequence<DeclarationSyntax.GreenNode> Declarations { get; }
 
         public SyntaxToken.GreenNode End { get; }
 
         /// <summary>
         /// Creates a new instance of the <see cref = "GreenNode"> type.
         /// </summary>
-        public GreenNode(Sequence<DeclarationSyntax.GreenNode> declarations, SyntaxToken.GreenNode end)
+        public GreenNode(SyntaxSequence<DeclarationSyntax.GreenNode> declarations, SyntaxToken.GreenNode end)
         {
             this.Declarations = declarations;
             this.End = end;
@@ -174,7 +174,7 @@ public sealed partial class ModuleDeclarationSyntax : DeclarationSyntax
     /// <summary>
     /// The declarations contained in the module.
     /// </summary>
-    public SyntaxSequence<DeclarationSyntax> Declarations => new(this.Green.Declarations, n => (DeclarationSyntax)n.ToRedNode(this));
+    public SyntaxSequence<DeclarationSyntax> Declarations => new(this.Green.Declarations.Underlying, n => (DeclarationSyntax)((DeclarationSyntax.GreenNode)n).ToRedNode(this));
     /// <summary>
     /// The end of file token.
     /// </summary>
@@ -294,14 +294,14 @@ public sealed partial class ParameterListSyntax : SyntaxNode
     {
         public SyntaxToken.GreenNode OpenParenthesis { get; }
 
-        public Sequence<ParameterSyntax.GreenNode> Parameters { get; }
+        public SyntaxSequence<ParameterSyntax.GreenNode> Parameters { get; }
 
         public SyntaxToken.GreenNode CloseParenthesis { get; }
 
         /// <summary>
         /// Creates a new instance of the <see cref = "GreenNode"> type.
         /// </summary>
-        public GreenNode(SyntaxToken.GreenNode openParenthesis, Sequence<ParameterSyntax.GreenNode> parameters, SyntaxToken.GreenNode closeParenthesis)
+        public GreenNode(SyntaxToken.GreenNode openParenthesis, SyntaxSequence<ParameterSyntax.GreenNode> parameters, SyntaxToken.GreenNode closeParenthesis)
         {
             this.OpenParenthesis = openParenthesis;
             this.Parameters = parameters;
@@ -334,7 +334,7 @@ public sealed partial class ParameterListSyntax : SyntaxNode
     /// <summary>
     /// The parameters of the function.
     /// </summary>
-    public SyntaxSequence<ParameterSyntax> Parameters => new(this.Green.Parameters, n => (ParameterSyntax)n.ToRedNode(this));
+    public SyntaxSequence<ParameterSyntax> Parameters => new(this.Green.Parameters.Underlying, n => (ParameterSyntax)((ParameterSyntax.GreenNode)n).ToRedNode(this));
     /// <summary>
     /// The close parenthesis token.
     /// </summary>
@@ -782,7 +782,7 @@ public static partial class SyntaxFactory
     /// <returns>
     /// The constructed syntax node.
     /// </returns>
-    public static ModuleDeclarationSyntax ModuleDeclaration(IEnumerable<DeclarationSyntax> declarations, SyntaxToken end) => new(null, new(declarations.Select(n => n.Green).ToSequence(), end.Green));
+    public static ModuleDeclarationSyntax ModuleDeclaration(IEnumerable<DeclarationSyntax> declarations, SyntaxToken end) => new(null, new(SyntaxSequence(declarations.Select(n => n.Green)), end.Green));
     /// <summary>
     /// Constructs a <see cref = "FunctionDeclarationSyntax"/> from the given arguments.
     /// </summary>
@@ -820,7 +820,7 @@ public static partial class SyntaxFactory
     /// <returns>
     /// The constructed syntax node.
     /// </returns>
-    public static ParameterListSyntax ParameterList(SyntaxToken openParenthesis, IEnumerable<ParameterSyntax> parameters, SyntaxToken closeParenthesis) => new(null, new(openParenthesis.Green, parameters.Select(n => n.Green).ToSequence(), closeParenthesis.Green));
+    public static ParameterListSyntax ParameterList(SyntaxToken openParenthesis, IEnumerable<ParameterSyntax> parameters, SyntaxToken closeParenthesis) => new(null, new(openParenthesis.Green, SyntaxSequence(parameters.Select(n => n.Green)), closeParenthesis.Green));
     /// <summary>
     /// Constructs a <see cref = "ParameterSyntax"/> from the given arguments.
     /// </summary>

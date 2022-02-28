@@ -40,7 +40,7 @@ public sealed class Parser
         {
             declarations.Add(this.ParseDeclaration());
         }
-        return new(null, new(declarations.ToSequence(), end));
+        return new(null, new(SyntaxFactory.SyntaxSequence(declarations), end));
     }
 
     private DeclarationSyntax.GreenNode ParseDeclaration()
@@ -96,7 +96,7 @@ public sealed class Parser
         // TODO: Handle proper errors
         if (!this.TryMatch(TokenType.CloseParenthesis, out var closeParen)) throw new NotImplementedException();
 
-        return new(openParen, parameters.ToSequence(), closeParen);
+        return new(openParen, SyntaxFactory.SyntaxSequence(parameters), closeParen);
     }
 
     private ExpressionSyntax.GreenNode ParseExpression()

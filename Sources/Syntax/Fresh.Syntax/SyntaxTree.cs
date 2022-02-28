@@ -83,31 +83,38 @@ public partial struct SyntaxToken
 /// Represents a sequence of syntax elements.
 /// </summary>
 /// <typeparam name="TElement">The syntax element type.</typeparam>
-public readonly record struct SyntaxSequence<TElement> : IReadOnlyList<TElement>
+public readonly struct SyntaxSequence<TElement> : IReadOnlyList<TElement>
     where TElement : ISyntaxElement
 {
-    private readonly IReadOnlyList<SyntaxNode.GreenNode> greenNodes;
-    private readonly Func<SyntaxNode.GreenNode, TElement> transformer;
+    internal Sequence<ISyntaxElement> Underlying { get; }
+
+    private readonly Func<ISyntaxElement, TElement> transformer;
 
     /// <inheritdoc/>
-    public int Count => this.greenNodes.Count;
+    public int Count => this.Underlying.Count;
 
     /// <inheritdoc/>
-    public TElement this[int index] => this.transformer(this.greenNodes[index]);
+    public TElement this[int index] => this.transformer(this.Underlying[index]);
 
     internal SyntaxSequence(
-        IReadOnlyList<SyntaxNode.GreenNode> greenNodes,
-        Func<SyntaxNode.GreenNode, TElement> transformer)
+        Sequence<ISyntaxElement> elements,
+        Func<ISyntaxElement, TElement> transformer)
     {
-        this.greenNodes = greenNodes;
+        this.Underlying = elements;
         this.transformer = transformer;
     }
 
     /// <inheritdoc/>
-    public IEnumerator<TElement> GetEnumerator() => this.greenNodes.Select(this.transformer).GetEnumerator();
+    public IEnumerator<TElement> GetEnumerator() => this.Underlying.Select(this.transformer).GetEnumerator();
 
     /// <inheritdoc/>
     IEnumerator IEnumerable.GetEnumerator() => this.GetEnumerator();
+
+    /// <inheritdoc/>
+    public bool Equals(SyntaxSequence<TElement> other) => this.Underlying.Equals(other.Underlying);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => this.Underlying.GetHashCode();
 }
 
 /// <summary>
@@ -196,7 +203,9 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
     private object? ToRedObject(object? value) => value switch
     {
         GreenNode g => g.ToRedNode(this),
-        IReadOnlyList<GreenNode> l => new SyntaxSequence<SyntaxNode>(l, n => n.ToRedNode(this)),
+        IReadOnlyList<GreenNode> l => new SyntaxSequence<SyntaxNode>(
+            l.ToSequence<ISyntaxElement>(),
+            n => ((GreenNode)n).ToRedNode(this)),
         _ => value,
     };
 
@@ -404,6 +413,15 @@ public partial class SyntaxFactory
     /// <param name="token">The represented token.</param>
     /// <returns>The constructed <see cref="SyntaxToken"/>.</returns>
     public static SyntaxToken Token(Token token) => Token(Sequence<Token>.Empty, token, Sequence<Token>.Empty);
+
+    /// <summary>
+    /// Creates a <see cref="SyntaxSequence{TElement}"/>.
+    /// </summary>
+    /// <typeparam name="TElement">The element type.</typeparam>
+    /// <param name="elements">The elements to create the sequence from.</param>
+    /// <returns>The syntax sequence created from <paramref name="elements"/>.</returns>
+    public static SyntaxSequence<TElement> SyntaxSequence<TElement>(IEnumerable<TElement> elements)
+        where TElement : ISyntaxElement => new(elements.Cast<ISyntaxElement>().ToSequence(), s => (TElement)s);
 }
 
 #pragma warning restore CS0109
