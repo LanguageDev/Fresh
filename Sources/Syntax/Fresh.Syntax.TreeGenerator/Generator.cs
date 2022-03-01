@@ -79,6 +79,11 @@ public sealed class Generator
             doc: node.Doc,
             modifiers: modifiers,
             name: node.Name,
+            genericParams: node.GenericParameters?.Select(p => new MemberInfo
+            {
+                Name = p.Name,
+                Doc = p.Doc,
+            }),
             bases: bases);
 
         // Green node
@@ -162,6 +167,7 @@ public sealed class Generator
             doc: null,
             modifiers: modifiers,
             name: "GreenNode",
+            genericParams : null,
             bases: bases);
 
         // Properties
@@ -219,6 +225,7 @@ public sealed class Generator
             modifiers: modifiers,
             ret: new MemberInfo { Type = node.Name },
             name: "ToRedNode",
+            genericParams: null,
             parameters: new[] { new MemberInfo { Name = "parent", Type = $"{this.tree.Root}?" } },
             body: node.IsAbstract ? null : "new(parent, this)");
 
@@ -233,6 +240,7 @@ public sealed class Generator
             doc: "Provides factory methods for the syntax nodes.",
             modifiers: Modifiers.Public | Modifiers.Static | Modifiers.Class,
             name: this.tree.Factory,
+            genericParams: null,
             bases: Enumerable.Empty<string>());
 
         foreach (var node in this.tree.Nodes) this.GenerateFactory(node);
@@ -286,6 +294,11 @@ public sealed class Generator
             modifiers: Modifiers.Public | Modifiers.Static,
             ret: new MemberInfo() { Type = node.Name, Doc = "The constructed syntax node." },
             name: methodName,
+            genericParams: node.GenericParameters?.Select(p => new MemberInfo
+            {
+                Name = p.Name,
+                Doc = p.Doc,
+            }),
             parameters: node.Fields.Select(f => new MemberInfo
             {
                 Name = CodeBuilder.EscapeKeyword(CodeBuilder.ToCamelCase(f.Name)),

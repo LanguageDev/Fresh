@@ -79,9 +79,21 @@ public sealed class CodeBuilder
 
     public CodeBuilder DocReturns(string text) => this.Doc("returns", text);
 
-    public CodeBuilder StartType(string? doc, Modifiers modifiers, string name, IEnumerable<string> bases)
+    public CodeBuilder StartType(
+        string? doc,
+        Modifiers modifiers,
+        string name,
+        IEnumerable<MemberInfo>? genericParams,
+        IEnumerable<string> bases)
     {
         if (doc is not null) this.DocSummary(doc);
+        if (genericParams is not null)
+        {
+            foreach (var p in genericParams)
+            {
+                if (p.Doc is not null) this.Doc("typeparam", p.Doc, ("name", p.Name));
+            }
+        }
         if (this.typeStack.Count > 0) this.Write("new ");
         this.Write(modifiers.HasFlag(Modifiers.Public) ? "public " : "internal ");
         if (modifiers.HasFlag(Modifiers.Static)) this.Write("static ");
@@ -93,6 +105,12 @@ public sealed class CodeBuilder
         this.Write("partial ");
         this.Write(modifiers.HasFlag(Modifiers.Class) ? "class " : "struct ");
         this.Write(name);
+        if (genericParams is not null && genericParams.Any())
+        {
+            this.Write("<");
+            this.Write(string.Join(", ", genericParams.Select(p => p.Name)));
+            this.Write(">");
+        }
         if (bases.Any())
         {
             this.Write(" : ");
@@ -196,17 +214,32 @@ public sealed class CodeBuilder
         Modifiers modifiers,
         MemberInfo ret,
         string name,
+        IEnumerable<MemberInfo>? genericParams,
         IEnumerable<MemberInfo> parameters,
         string? body)
     {
         if (doc is not null) this.DocSummary(doc);
+        if (genericParams is not null)
+        {
+            foreach (var p in genericParams)
+            {
+                if (p.Doc is not null) this.Doc("typeparam", p.Doc, ("name", p.Name));
+            }
+        }
         foreach (var p in parameters)
         {
             if (doc is not null && p.Doc is not null) this.DocParam(p.Name, p.Doc);
         }
         if (doc is not null && ret.Doc is not null) this.DocReturns(ret.Doc);
         this.DumpNonTypeModifiers(modifiers);
-        this.Write($"{ret.Type} {name}(");
+        this.Write($"{ret.Type} {name}");
+        if (genericParams is not null && genericParams.Any())
+        {
+            this.Write("<");
+            this.Write(string.Join(", ", genericParams.Select(p => p.Name)));
+            this.Write(">");
+        }
+        this.Write("(");
         this.Write(string.Join(", ", parameters.Select(p => $"{p.Type} {p.Name}")));
         this.Write(")");
         if (body is not null) this.Write($" => {body}");

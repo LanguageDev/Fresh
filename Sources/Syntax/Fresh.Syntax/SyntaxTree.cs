@@ -48,9 +48,6 @@ public interface ISyntaxElement
 /// <param name="Comments">The sequence of comment tokens.</param>
 public readonly record struct CommentGroup(Sequence<Token> Comments);
 
-/// <summary>
-/// Represents a single token as the part of the syntax tree.
-/// </summary>
 public partial struct SyntaxToken
 {
     internal partial struct GreenNode
@@ -146,7 +143,7 @@ public readonly struct EnclosedSyntax<TElement>
 /// <summary>
 /// Represents a piece of syntax with an optional punctuation.
 /// </summary>
-/// <typeparam name="TElement">The element type that is punctuation.</typeparam>
+/// <typeparam name="TElement">The element type that is punctuated.</typeparam>
 public readonly struct PunctuatedSyntax<TElement>
     where TElement : ISyntaxElement
 {

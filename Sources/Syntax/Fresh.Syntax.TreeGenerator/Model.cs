@@ -28,6 +28,7 @@ public sealed class NodeModel
     public bool IsAbstract { get; set; } = false;
     public bool IsStruct { get; set; } = false;
     public string? FactoryHintName { get; set; }
+    public GenericParameterModel[] GenericParameters { get; set; } = Array.Empty<GenericParameterModel>();
     public FieldModel[] Fields { get; set; } = Array.Empty<FieldModel>();
 }
 
@@ -37,4 +38,10 @@ public sealed class FieldModel
     public string Type { get; set; } = string.Empty;
     public string? Doc { get; set; }
     public bool IsOptional { get; set; } = false;
+}
+
+public sealed class GenericParameterModel
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Doc { get; set; } = null;
 }
