@@ -92,6 +92,11 @@ public enum TokenType
     Semicolon,
 
     /// <summary>
+    /// '='.
+    /// </summary>
+    Assign,
+
+    /// <summary>
     /// The 'func' keyword.
     /// </summary>
     KeywordFunc,
@@ -100,6 +105,11 @@ public enum TokenType
     /// The 'var' keyword.
     /// </summary>
     KeywordVar,
+
+    /// <summary>
+    /// The 'val' keyword.
+    /// </summary>
+    KeywordVal,
 
     /// <summary>
     /// The 'if' keyword.
@@ -115,6 +125,16 @@ public enum TokenType
     /// The 'else' keyword.
     /// </summary>
     KeywordElse,
+
+    /// <summary>
+    /// The 'while' keyword.
+    /// </summary>
+    KeywordWhile,
+
+    /// <summary>
+    /// The 'do' keyword.
+    /// </summary>
+    KeywordDo,
 
     /// <summary>
     /// A general identifier.

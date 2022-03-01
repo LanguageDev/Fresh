@@ -92,6 +92,7 @@ public sealed class Lexer
         case ',': return this.Take(1, TokenType.Comma);
         case ':': return this.Take(1, TokenType.Colon);
         case ';': return this.Take(1, TokenType.Semicolon);
+        case '=': return this.Take(1, TokenType.Assign);
         }
 
         // A number
@@ -117,9 +118,12 @@ public sealed class Lexer
             {
                 "func" => TokenType.KeywordFunc,
                 "var" => TokenType.KeywordVar,
+                "val" => TokenType.KeywordVal,
                 "if" => TokenType.KeywordIf,
                 "then" => TokenType.KeywordThen,
                 "else" => TokenType.KeywordElse,
+                "while" => TokenType.KeywordWhile,
+                "do" => TokenType.KeywordDo,
                 _ => TokenType.Identifier,
             };
             // Construct result

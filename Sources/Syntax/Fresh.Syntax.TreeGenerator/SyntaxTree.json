@@ -167,13 +167,31 @@
         },
         {
           "name": "Arguments",
-          "type": "SyntaxSequence<ExpressionSyntax>",
+          "type": "SyntaxSequence<ArgumentSyntax>",
           "doc": "The argument values."
         },
         {
           "name": "CloseParenthesis",
           "type": "SyntaxToken",
           "doc": "The close parenthesis token."
+        }
+      ]
+    },
+    {
+      "name": "ArgumentSyntax",
+      "doc": "A single argument for a function call.",
+      "base": "SyntaxNode",
+      "fields": [
+        {
+          "name": "Expression",
+          "type": "ExpressionSyntax",
+          "doc": "The expression to pass as an argument."
+        },
+        {
+          "name": "Comma",
+          "type": "SyntaxToken",
+          "doc": "The comma token.",
+          "isOptional": true
         }
       ]
     },
@@ -208,6 +226,12 @@
           "name": "Value",
           "type": "ExpressionSyntax",
           "doc": "The specified value."
+        },
+        {
+          "name": "Semicolon",
+          "type": "SyntaxToken",
+          "doc": "The semicolon token.",
+          "isOptional": true
         }
       ]
     },

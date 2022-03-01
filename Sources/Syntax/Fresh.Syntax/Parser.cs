@@ -18,10 +18,16 @@ namespace Fresh.Syntax;
 /// </summary>
 public sealed class Parser
 {
+    private enum ParseMode
+    {
+        Expression,
+        Statement,
+    }
+
     public static ModuleDeclarationSyntax Parse(IEnumerable<SyntaxToken> tokens)
     {
         var parser = new Parser(tokens.GetEnumerator());
-        return parser.ParseFileDeclaration();
+        return parser.ParseModuleDeclaration();
     }
 
     private readonly IEnumerator<SyntaxToken> tokens;
@@ -32,7 +38,7 @@ public sealed class Parser
         this.tokens = tokenSource;
     }
 
-    public ModuleDeclarationSyntax ParseFileDeclaration()
+    public ModuleDeclarationSyntax ParseModuleDeclaration()
     {
         var declarations = new List<DeclarationSyntax.GreenNode>();
         SyntaxToken.GreenNode end;
@@ -45,7 +51,7 @@ public sealed class Parser
 
     private DeclarationSyntax.GreenNode ParseDeclaration()
     {
-        Debug.Assert(this.TryPeek(0, out var head));
+        var head = this.Peek();
         return head.Token.Type switch
         {
             TokenType.KeywordFunc => this.ParseFunctionDeclaration(),
@@ -54,37 +60,99 @@ public sealed class Parser
         };
     }
 
+    private StatementSyntax.GreenNode ParseStatement()
+    {
+        var head = this.Peek();
+        return head.Token.Type switch
+        {
+            TokenType.KeywordVar or TokenType.KeywordVal => this.ParseVariableDeclaration(),
+            TokenType.OpenBrace =>
+                new ExpressionStatementSyntax.GreenNode(this.ParseBlockExpression(ParseMode.Statement), null),
+            TokenType.KeywordIf =>
+                new ExpressionStatementSyntax.GreenNode(this.ParseIfExpression(ParseMode.Statement), null),
+            TokenType.KeywordWhile =>
+                new ExpressionStatementSyntax.GreenNode(this.ParseWhileExpression(ParseMode.Statement), null),
+            _ => this.ParseExpressionStatement(),
+        };
+    }
+
+    private ExpressionStatementSyntax.GreenNode ParseExpressionStatement()
+    {
+        var expr = this.ParseExpression();
+        var semicolon = this.Expect(TokenType.Semicolon);
+        return new(expr, semicolon);
+    }
+
+    private VariableDeclarationSyntax.GreenNode ParseVariableDeclaration()
+    {
+        if (!this.TryPeek(TokenType.KeywordVar) && !this.TryPeek(TokenType.KeywordVal))
+        {
+            // TODO: Proper error
+            throw new NotImplementedException("TODO: Syntax error");
+        }
+        var kw = this.Take();
+        var name = this.Expect(TokenType.Identifier);
+        // Type
+        TypeSpecifierSyntax.GreenNode? typeSpecifier = null;
+        if (this.TryMatch(TokenType.Colon, out var colon))
+        {
+            var type = this.ParseType();
+            typeSpecifier = new(colon, type);
+        }
+        // Value
+        ValueSpecifierSyntax.GreenNode? valueSpecifier = null;
+        if (this.TryMatch(TokenType.Assign, out var assign))
+        {
+            var value = this.ParseExpression();
+            valueSpecifier = new(assign, value, null);
+        }
+        // Semicolon
+        var semicolon = this.Expect(TokenType.Semicolon);
+        return new(kw, name, typeSpecifier, valueSpecifier, semicolon);
+    }
+
     private FunctionDeclarationSyntax.GreenNode ParseFunctionDeclaration()
     {
-        var funcKw = this.Take();
-        Debug.Assert(funcKw.Type == TokenType.KeywordFunc);
-        // TODO: Handle proper errors
-        if (!this.TryMatch(TokenType.Identifier, out var name)) throw new NotImplementedException();
+        var funcKw = this.Expect(TokenType.KeywordFunc);
+        var name = this.Expect(TokenType.Identifier);
         var paramList = this.ParseParameterList();
+        // Return type
         TypeSpecifierSyntax.GreenNode? typeSpecifier = null;
         if (this.TryMatch(TokenType.Colon, out var colon))
         {
             var returnType = this.ParseType();
             typeSpecifier = new(colon, returnType);
         }
-        var body = this.ParseExpression();
+        // Body
+        SyntaxNode.GreenNode body;
+        if (this.TryMatch(TokenType.Assign, out var assign))
+        {
+            // = value ';'
+            var value = this.ParseExpression();
+            var semicol = this.Expect(TokenType.Semicolon);
+            body = new ValueSpecifierSyntax.GreenNode(assign, value, semicol);
+        }
+        else if (this.TryPeek(TokenType.OpenBrace))
+        {
+            body = this.ParseBlockExpression(ParseMode.Statement);
+        }
+        else
+        {
+            // TODO: Proper error
+            throw new NotImplementedException("TODO: Syntax error");
+        }
         return new(funcKw, name, paramList, typeSpecifier, body);
     }
 
     private ParameterListSyntax.GreenNode ParseParameterList()
     {
-        // TODO: Handle proper errors
-        if (!this.TryMatch(TokenType.OpenParenthesis, out var openParen)) throw new NotImplementedException();
+        var openParen = this.Expect(TokenType.OpenParenthesis);
 
         var parameters = new List<ParameterSyntax.GreenNode>();
         while (!this.TryPeek(TokenType.CloseParenthesis))
         {
-            // TODO: Handle proper errors
-            if (!this.TryMatch(TokenType.Identifier, out var parameterName)) throw new NotImplementedException();
-
-            // TODO: Handle proper errors
-            if (!this.TryMatch(TokenType.Colon, out var parameterColon)) throw new NotImplementedException();
-
+            var parameterName = this.Expect(TokenType.Identifier);
+            var parameterColon = this.Expect(TokenType.Colon);
             var parameterType = this.ParseType();
             var keepGoing = this.TryMatch(TokenType.Comma, out var comma);
 
@@ -93,30 +161,79 @@ public sealed class Parser
             if (!keepGoing) break;
         }
 
-        // TODO: Handle proper errors
-        if (!this.TryMatch(TokenType.CloseParenthesis, out var closeParen)) throw new NotImplementedException();
+        var closeParen = this.Expect(TokenType.CloseParenthesis);
 
         return new(openParen, SyntaxFactory.SyntaxSequence(parameters), closeParen);
     }
 
+    private ArgumentListSyntax.GreenNode ParseArgumentList(TokenType open, TokenType close)
+    {
+        var openToken = this.Expect(open);
+
+        var arguments = new List<ArgumentSyntax.GreenNode>();
+        while (!this.TryPeek(close))
+        {
+            var value = this.ParseExpression();
+            var keepGoing = this.TryMatch(TokenType.Comma, out var comma);
+
+            arguments.Add(new(value, keepGoing ? comma : null));
+
+            if (!keepGoing) break;
+        }
+
+        var closeToken = this.Expect(close);
+
+        return new(openToken, SyntaxFactory.SyntaxSequence(arguments), closeToken);
+    }
+
     private ExpressionSyntax.GreenNode ParseExpression()
     {
-        Debug.Assert(this.TryPeek(0, out var head));
+        var head = this.Peek();
         return head.Token.Type switch
         {
-            TokenType.OpenBrace => this.ParseBlockExpression(),
+            TokenType.OpenBrace => this.ParseBlockExpression(ParseMode.Expression),
             // TODO: Handle proper errors
             _ => throw new NotImplementedException(),
         };
     }
 
-    private BlockExpressionSyntax.GreenNode ParseBlockExpression()
+    private BlockExpressionSyntax.GreenNode ParseBlockExpression(ParseMode parseMode)
     {
-        var openBrace = this.Take();
-        Debug.Assert(openBrace.Type == TokenType.OpenBrace);
-        // TODO: Handle proper errors
-        if (!this.TryMatch(TokenType.CloseBrace, out var closeBrace)) throw new NotImplementedException();
-        return new(openBrace, closeBrace);
+        var openBrace = this.Expect(TokenType.OpenBrace);
+        var statements = new List<StatementSyntax.GreenNode>();
+        ExpressionSyntax.GreenNode? value = null;
+        while (true)
+        {
+            // TODO
+            throw new NotImplementedException();
+        }
+        var closeBrace = this.Expect(TokenType.CloseBrace);
+        return new(openBrace, SyntaxFactory.SyntaxSequence(statements), value, closeBrace);
+    }
+
+    private IfExpressionSyntax.GreenNode ParseIfExpression(ParseMode parseMode)
+    {
+        var ifKw = this.Expect(TokenType.KeywordIf);
+        var condition = this.ParseExpression();
+        var thenKw = this.Expect(TokenType.KeywordThen);
+        var thenBody = this.ParseByParseMode(parseMode);
+        SyntaxToken.GreenNode? elseKw = null;
+        SyntaxNode.GreenNode? elseBody = null;
+        if (this.TryMatch(TokenType.KeywordElse, out var elseKw1))
+        {
+            elseKw = elseKw1;
+            elseBody = this.ParseByParseMode(parseMode);
+        }
+        return new(ifKw, condition, thenKw, thenBody, elseKw, elseBody);
+    }
+
+    private WhileExpressionSyntax.GreenNode ParseWhileExpression(ParseMode parseMode)
+    {
+        var whileKw = this.Expect(TokenType.KeywordWhile);
+        var condition = this.ParseExpression();
+        var doKw = this.Expect(TokenType.KeywordDo);
+        var body = this.ParseByParseMode(parseMode);
+        return new(whileKw, condition, doKw, body);
     }
 
     private TypeSyntax.GreenNode ParseType()
@@ -124,6 +241,19 @@ public sealed class Parser
         if (this.TryMatch(TokenType.Identifier, out var typeIdent)) return new IdentifierSyntax.GreenNode(typeIdent);
         // TODO: Handle proper errors
         throw new NotImplementedException();
+    }
+
+    private SyntaxNode.GreenNode ParseByParseMode(ParseMode parseMode) => parseMode == ParseMode.Expression
+        ? this.ParseExpression()
+        : this.ParseStatement();
+
+    // Elemental operations on syntax
+
+    private SyntaxToken.GreenNode Expect(TokenType tokenType)
+    {
+        // TODO: Proper errors
+        if (!this.TryMatch(tokenType, out var t)) throw new NotImplementedException("TODO: Syntax error");
+        return t;
     }
 
     private bool TryMatch(TokenType tokenType, [MaybeNullWhen(false)] out SyntaxToken.GreenNode token)
@@ -140,6 +270,14 @@ public sealed class Parser
     {
         if (!this.TryPeek(0, out _)) throw new InvalidOperationException($"Could nod take a token");
         return this.peekBuffer.RemoveFront();
+    }
+
+    private SyntaxToken.GreenNode Peek()
+    {
+        // NOTE: This should probably never fail when called because there must be an end token
+        // TODO: Proper errors
+        if (!this.TryPeek(0, out var t)) throw new InvalidOperationException("TODO: Error");
+        return t;
     }
 
     private bool TryPeek(int offset, [MaybeNullWhen(false)] out SyntaxToken.GreenNode token)
