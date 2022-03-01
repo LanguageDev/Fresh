@@ -37,60 +37,6 @@
       ]
     },
     {
-      "name": "EnclosedSyntax",
-      "isStruct": true,
-      "base": "ISyntaxElement",
-      "doc": "Represents an enclosed piece of syntax between a pair of balanced tokens (like parentheses).",
-      "genericParameters": [
-        {
-          "name": "TElement",
-          "doc": "The element type that is enclosed."
-        }
-      ],
-      "fields": [
-        {
-          "name": "Open",
-          "type": "SyntaxToken",
-          "doc": "The token that opens the enclosed syntax."
-        },
-        {
-          "name": "Element",
-          "type": "TElement",
-          "doc": "The element that is enclosed."
-        },
-        {
-          "name": "Close",
-          "type": "SyntaxToken",
-          "doc": "The token that closes the enclosed syntax."
-        }
-      ]
-    },
-    {
-      "name": "PunctuatedSyntax",
-      "isStruct": true,
-      "base": "ISyntaxElement",
-      "doc": "Represents a syntax element with an optional punctuation.",
-      "genericParameters": [
-        {
-          "name": "TElement",
-          "doc": "The type of the element that is being punctuated."
-        }
-      ],
-      "fields": [
-        {
-          "name": "Element",
-          "type": "TElement",
-          "doc": "The element that is being punctuated."
-        },
-        {
-          "name": "Punctuation",
-          "type": "SyntaxToken",
-          "isOptional": true,
-          "doc": "The punctuation mark."
-        }
-      ]
-    },
-    {
       "name": "StatementSyntax",
       "doc": "The base for all statement syntax nodes.",
       "base": "SyntaxNode",
