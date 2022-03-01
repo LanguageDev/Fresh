@@ -105,7 +105,7 @@
         },
         {
           "name": "Body",
-          "type": "ExpressionSyntax",
+          "type": "SyntaxNode",
           "doc": "The body of the function."
         }
       ]
@@ -156,6 +156,28 @@
       ]
     },
     {
+      "name": "ArgumentListSyntax",
+      "doc": "A list of arguments for a function call.",
+      "base": "SyntaxNode",
+      "fields": [
+        {
+          "name": "OpenParenthesis",
+          "type": "SyntaxToken",
+          "doc": "The open parenthesis token."
+        },
+        {
+          "name": "Arguments",
+          "type": "SyntaxSequence<ExpressionSyntax>",
+          "doc": "The argument values."
+        },
+        {
+          "name": "CloseParenthesis",
+          "type": "SyntaxToken",
+          "doc": "The close parenthesis token."
+        }
+      ]
+    },
+    {
       "name": "TypeSpecifierSyntax",
       "doc": "Syntax for specifying a type of a parameter or a variable.",
       "base": "SyntaxNode",
@@ -173,6 +195,75 @@
       ]
     },
     {
+      "name": "ValueSpecifierSyntax",
+      "doc": "Syntax for specifying a value of a parameter or variable.",
+      "base": "SyntaxNode",
+      "fields": [
+        {
+          "name": "Assign",
+          "type": "SyntaxToken",
+          "doc": "The assignment token."
+        },
+        {
+          "name": "Value",
+          "type": "ExpressionSyntax",
+          "doc": "The specified value."
+        }
+      ]
+    },
+    {
+      "name": "ExpressionStatementSyntax",
+      "doc": "A statement that contains an expression.",
+      "base": "StatementSyntax",
+      "fields": [
+        {
+          "name": "Expression",
+          "type": "ExpressionSyntax",
+          "doc": "The expression contained in the statement."
+        },
+        {
+          "name": "Semicolon",
+          "type": "SyntaxToken",
+          "doc": "The semicolon token.",
+          "isOptional": true
+        }
+      ]
+    },
+    {
+      "name": "VariableDeclarationSyntax",
+      "doc": "A variable declaration.",
+      "base": "DeclarationSyntax",
+      "fields": [
+        {
+          "name": "VarKeyword",
+          "type": "SyntaxToken",
+          "doc": "The var or val keyword."
+        },
+        {
+          "name": "Name",
+          "type": "SyntaxToken",
+          "doc": "The name of the variable."
+        },
+        {
+          "name": "TypeSpecifier",
+          "type": "TypeSpecifierSyntax",
+          "doc": "The type specifier of the variable.",
+          "isOptional": true
+        },
+        {
+          "name": "ValueSpecifier",
+          "type": "ValueSpecifierSyntax",
+          "doc": "The value specifier of the variable.",
+          "isOptional": true
+        },
+        {
+          "name": "Semicolon",
+          "type": "SyntaxToken",
+          "doc": "The semicolon token."
+        }
+      ]
+    },
+    {
       "name": "BlockExpressionSyntax",
       "doc": "A code block expression.",
       "base": "ExpressionSyntax",
@@ -183,9 +274,108 @@
           "doc": "The open brace token."
         },
         {
+          "name": "Statements",
+          "type": "SyntaxSequence<StatementSyntax>",
+          "doc": "The statements in the block."
+        },
+        {
+          "name": "Value",
+          "type": "ExpressionSyntax",
+          "doc": "The value of the block expression.",
+          "isOptional": true
+        },
+        {
           "name": "CloseBrace",
           "type": "SyntaxToken",
           "doc": "The close brace token."
+        }
+      ]
+    },
+    {
+      "name": "IfExpressionSyntax",
+      "doc": "An if expression.",
+      "base": "ExpressionSyntax",
+      "fields": [
+        {
+          "name": "IfKeyword",
+          "type": "SyntaxToken",
+          "doc": "The if keyword."
+        },
+        {
+          "name": "Condition",
+          "type": "ExpressionSyntax",
+          "doc": "The condition of the if expression."
+        },
+        {
+          "name": "ThenKeyword",
+          "type": "SyntaxToken",
+          "doc": "The then keyword."
+        },
+        {
+          "name": "Then",
+          "type": "SyntaxNode",
+          "doc": "The then part of the if expression."
+        },
+        {
+          "name": "ElseKeyword",
+          "type": "SyntaxToken",
+          "doc": "The else keyword.",
+          "isOptional": true
+        },
+        {
+          "name": "Else",
+          "type": "SyntaxNode",
+          "doc": "The else part of the if expression.",
+          "isOptional": true
+        }
+      ]
+    },
+    {
+      "name": "WhileExpressionSyntax",
+      "doc": "A while expression.",
+      "base": "ExpressionSyntax",
+      "fields": [
+        {
+          "name": "WhileKeyword",
+          "type": "SyntaxToken",
+          "doc": "The while keyword."
+        },
+        {
+          "name": "Condition",
+          "type": "ExpressionSyntax",
+          "doc": "The condition of the while expression."
+        },
+        {
+          "name": "DoKeyword",
+          "type": "SyntaxToken",
+          "doc": "The do keyword."
+        },
+        {
+          "name": "Body",
+          "type": "SyntaxNode",
+          "doc": "The body of the while expression."
+        }
+      ]
+    },
+    {
+      "name": "GroupExpressionSyntax",
+      "doc": "An expression in parenthesis.",
+      "base": "SyntaxNode",
+      "fields": [
+        {
+          "name": "OpenParenthesis",
+          "type": "SyntaxToken",
+          "doc": "The open parenthesis token."
+        },
+        {
+          "name": "SubExpression",
+          "type": "ExpressionSyntax",
+          "doc": "The wrapped subexpression."
+        },
+        {
+          "name": "CloseParenthesis",
+          "type": "SyntaxToken",
+          "doc": "The close parenthesis token."
         }
       ]
     },
@@ -237,6 +427,23 @@
           "name": "Right",
           "type": "ExpressionSyntax",
           "doc": "The right operand."
+        }
+      ]
+    },
+    {
+      "name": "CallExpressionSyntax",
+      "doc": "A call expression.",
+      "base": "ExpressionSyntax",
+      "fields": [
+        {
+          "name": "Called",
+          "type": "ExpressionSyntax",
+          "doc": "The called expression."
+        },
+        {
+          "name": "Arguments",
+          "type": "ArgumentListSyntax",
+          "doc": "The argument list."
         }
       ]
     }

@@ -35,7 +35,7 @@ public sealed class CodeBuilder
 {
     private sealed record class TypeInfo(Modifiers Modifiers, string Name);
 
-    private static readonly string[] keywords = new[] { "operator" };
+    private static readonly string[] keywords = new[] { "operator", "if", "else", "while", "return", "do" };
 
     private readonly StringBuilder builder = new();
     private readonly Stack<TypeInfo> typeStack = new();

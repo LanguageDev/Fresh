@@ -212,12 +212,12 @@ public sealed partial class FunctionDeclarationSyntax : DeclarationSyntax
 
         public TypeSpecifierSyntax.GreenNode? TypeSpecifier { get; }
 
-        public ExpressionSyntax.GreenNode Body { get; }
+        public SyntaxNode.GreenNode Body { get; }
 
         /// <summary>
         /// Creates a new instance of the <see cref = "GreenNode"> type.
         /// </summary>
-        public GreenNode(SyntaxToken.GreenNode funcKeyword, SyntaxToken.GreenNode name, ParameterListSyntax.GreenNode parameterList, TypeSpecifierSyntax.GreenNode? typeSpecifier, ExpressionSyntax.GreenNode body)
+        public GreenNode(SyntaxToken.GreenNode funcKeyword, SyntaxToken.GreenNode name, ParameterListSyntax.GreenNode parameterList, TypeSpecifierSyntax.GreenNode? typeSpecifier, SyntaxNode.GreenNode body)
         {
             this.FuncKeyword = funcKeyword;
             this.Name = name;
@@ -266,7 +266,7 @@ public sealed partial class FunctionDeclarationSyntax : DeclarationSyntax
     /// <summary>
     /// The body of the function.
     /// </summary>
-    public ExpressionSyntax Body => this.Green.Body.ToRedNode(this);
+    public SyntaxNode Body => this.Green.Body.ToRedNode(this);
     internal override GreenNode Green { get; }
 
     /// <summary>
@@ -430,6 +430,78 @@ public sealed partial class ParameterSyntax : SyntaxNode
 }
 
 /// <summary>
+/// A list of arguments for a function call.
+/// </summary>
+public sealed partial class ArgumentListSyntax : SyntaxNode
+{
+    new internal sealed partial class GreenNode : SyntaxNode.GreenNode
+    {
+        public SyntaxToken.GreenNode OpenParenthesis { get; }
+
+        public SyntaxSequence<ExpressionSyntax.GreenNode> Arguments { get; }
+
+        public SyntaxToken.GreenNode CloseParenthesis { get; }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref = "GreenNode"> type.
+        /// </summary>
+        public GreenNode(SyntaxToken.GreenNode openParenthesis, SyntaxSequence<ExpressionSyntax.GreenNode> arguments, SyntaxToken.GreenNode closeParenthesis)
+        {
+            this.OpenParenthesis = openParenthesis;
+            this.Arguments = arguments;
+            this.CloseParenthesis = closeParenthesis;
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object? other) => this.Equals(other as SyntaxNode.GreenNode);
+        /// <inheritdoc/>
+        public override bool Equals([AllowNull] SyntaxNode.GreenNode other) => other is GreenNode o && object.Equals(this.OpenParenthesis, o.OpenParenthesis) && object.Equals(this.Arguments, o.Arguments) && object.Equals(this.CloseParenthesis, o.CloseParenthesis);
+        /// <inheritdoc/>
+        public override int GetHashCode() => HashCode.Combine(this.OpenParenthesis, this.Arguments, this.CloseParenthesis);
+        public override IEnumerable<KeyValuePair<string, object?>> Children
+        {
+            get
+            {
+                yield return new(nameof(this.OpenParenthesis), this.OpenParenthesis);
+                yield return new(nameof(this.Arguments), this.Arguments);
+                yield return new(nameof(this.CloseParenthesis), this.CloseParenthesis);
+            }
+        }
+
+        public override ArgumentListSyntax ToRedNode(SyntaxNode? parent) => new(parent, this);
+    }
+
+    /// <summary>
+    /// The open parenthesis token.
+    /// </summary>
+    public SyntaxToken OpenParenthesis => this.Green.OpenParenthesis.ToRedNode(this);
+    /// <summary>
+    /// The argument values.
+    /// </summary>
+    public SyntaxSequence<ExpressionSyntax> Arguments => new(this.Green.Arguments.Underlying, n => (ExpressionSyntax)((ExpressionSyntax.GreenNode)n).ToRedNode(this));
+    /// <summary>
+    /// The close parenthesis token.
+    /// </summary>
+    public SyntaxToken CloseParenthesis => this.Green.CloseParenthesis.ToRedNode(this);
+    internal override GreenNode Green { get; }
+
+    /// <summary>
+    /// Creates a new instance of the <see cref = "ArgumentListSyntax"> type.
+    /// </summary>
+    /// <param name = "parent">
+    /// The parent node of this one.
+    /// </param>
+    /// <param name = "green">
+    /// The wrapped green node.
+    /// </param>
+    internal ArgumentListSyntax(SyntaxNode? parent, GreenNode green)
+    {
+        this.Parent = parent;
+        this.Green = green;
+    }
+}
+
+/// <summary>
 /// Syntax for specifying a type of a parameter or a variable.
 /// </summary>
 public sealed partial class TypeSpecifierSyntax : SyntaxNode
@@ -494,6 +566,222 @@ public sealed partial class TypeSpecifierSyntax : SyntaxNode
 }
 
 /// <summary>
+/// Syntax for specifying a value of a parameter or variable.
+/// </summary>
+public sealed partial class ValueSpecifierSyntax : SyntaxNode
+{
+    new internal sealed partial class GreenNode : SyntaxNode.GreenNode
+    {
+        public SyntaxToken.GreenNode Assign { get; }
+
+        public ExpressionSyntax.GreenNode Value { get; }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref = "GreenNode"> type.
+        /// </summary>
+        public GreenNode(SyntaxToken.GreenNode assign, ExpressionSyntax.GreenNode value)
+        {
+            this.Assign = assign;
+            this.Value = value;
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object? other) => this.Equals(other as SyntaxNode.GreenNode);
+        /// <inheritdoc/>
+        public override bool Equals([AllowNull] SyntaxNode.GreenNode other) => other is GreenNode o && object.Equals(this.Assign, o.Assign) && object.Equals(this.Value, o.Value);
+        /// <inheritdoc/>
+        public override int GetHashCode() => HashCode.Combine(this.Assign, this.Value);
+        public override IEnumerable<KeyValuePair<string, object?>> Children
+        {
+            get
+            {
+                yield return new(nameof(this.Assign), this.Assign);
+                yield return new(nameof(this.Value), this.Value);
+            }
+        }
+
+        public override ValueSpecifierSyntax ToRedNode(SyntaxNode? parent) => new(parent, this);
+    }
+
+    /// <summary>
+    /// The assignment token.
+    /// </summary>
+    public SyntaxToken Assign => this.Green.Assign.ToRedNode(this);
+    /// <summary>
+    /// The specified value.
+    /// </summary>
+    public ExpressionSyntax Value => this.Green.Value.ToRedNode(this);
+    internal override GreenNode Green { get; }
+
+    /// <summary>
+    /// Creates a new instance of the <see cref = "ValueSpecifierSyntax"> type.
+    /// </summary>
+    /// <param name = "parent">
+    /// The parent node of this one.
+    /// </param>
+    /// <param name = "green">
+    /// The wrapped green node.
+    /// </param>
+    internal ValueSpecifierSyntax(SyntaxNode? parent, GreenNode green)
+    {
+        this.Parent = parent;
+        this.Green = green;
+    }
+}
+
+/// <summary>
+/// A statement that contains an expression.
+/// </summary>
+public sealed partial class ExpressionStatementSyntax : StatementSyntax
+{
+    new internal sealed partial class GreenNode : StatementSyntax.GreenNode
+    {
+        public ExpressionSyntax.GreenNode Expression { get; }
+
+        public SyntaxToken.GreenNode? Semicolon { get; }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref = "GreenNode"> type.
+        /// </summary>
+        public GreenNode(ExpressionSyntax.GreenNode expression, SyntaxToken.GreenNode? semicolon)
+        {
+            this.Expression = expression;
+            this.Semicolon = semicolon;
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object? other) => this.Equals(other as SyntaxNode.GreenNode);
+        /// <inheritdoc/>
+        public override bool Equals([AllowNull] SyntaxNode.GreenNode other) => other is GreenNode o && object.Equals(this.Expression, o.Expression) && object.Equals(this.Semicolon, o.Semicolon);
+        /// <inheritdoc/>
+        public override int GetHashCode() => HashCode.Combine(this.Expression, this.Semicolon);
+        public override IEnumerable<KeyValuePair<string, object?>> Children
+        {
+            get
+            {
+                yield return new(nameof(this.Expression), this.Expression);
+                yield return new(nameof(this.Semicolon), this.Semicolon);
+            }
+        }
+
+        public override ExpressionStatementSyntax ToRedNode(SyntaxNode? parent) => new(parent, this);
+    }
+
+    /// <summary>
+    /// The expression contained in the statement.
+    /// </summary>
+    public ExpressionSyntax Expression => this.Green.Expression.ToRedNode(this);
+    /// <summary>
+    /// The semicolon token.
+    /// </summary>
+    public SyntaxToken? Semicolon => this.Green.Semicolon?.ToRedNode(this);
+    internal override GreenNode Green { get; }
+
+    /// <summary>
+    /// Creates a new instance of the <see cref = "ExpressionStatementSyntax"> type.
+    /// </summary>
+    /// <param name = "parent">
+    /// The parent node of this one.
+    /// </param>
+    /// <param name = "green">
+    /// The wrapped green node.
+    /// </param>
+    internal ExpressionStatementSyntax(SyntaxNode? parent, GreenNode green)
+    {
+        this.Parent = parent;
+        this.Green = green;
+    }
+}
+
+/// <summary>
+/// A variable declaration.
+/// </summary>
+public sealed partial class VariableDeclarationSyntax : DeclarationSyntax
+{
+    new internal sealed partial class GreenNode : DeclarationSyntax.GreenNode
+    {
+        public SyntaxToken.GreenNode VarKeyword { get; }
+
+        public SyntaxToken.GreenNode Name { get; }
+
+        public TypeSpecifierSyntax.GreenNode? TypeSpecifier { get; }
+
+        public ValueSpecifierSyntax.GreenNode? ValueSpecifier { get; }
+
+        public SyntaxToken.GreenNode Semicolon { get; }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref = "GreenNode"> type.
+        /// </summary>
+        public GreenNode(SyntaxToken.GreenNode varKeyword, SyntaxToken.GreenNode name, TypeSpecifierSyntax.GreenNode? typeSpecifier, ValueSpecifierSyntax.GreenNode? valueSpecifier, SyntaxToken.GreenNode semicolon)
+        {
+            this.VarKeyword = varKeyword;
+            this.Name = name;
+            this.TypeSpecifier = typeSpecifier;
+            this.ValueSpecifier = valueSpecifier;
+            this.Semicolon = semicolon;
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object? other) => this.Equals(other as SyntaxNode.GreenNode);
+        /// <inheritdoc/>
+        public override bool Equals([AllowNull] SyntaxNode.GreenNode other) => other is GreenNode o && object.Equals(this.VarKeyword, o.VarKeyword) && object.Equals(this.Name, o.Name) && object.Equals(this.TypeSpecifier, o.TypeSpecifier) && object.Equals(this.ValueSpecifier, o.ValueSpecifier) && object.Equals(this.Semicolon, o.Semicolon);
+        /// <inheritdoc/>
+        public override int GetHashCode() => HashCode.Combine(this.VarKeyword, this.Name, this.TypeSpecifier, this.ValueSpecifier, this.Semicolon);
+        public override IEnumerable<KeyValuePair<string, object?>> Children
+        {
+            get
+            {
+                yield return new(nameof(this.VarKeyword), this.VarKeyword);
+                yield return new(nameof(this.Name), this.Name);
+                yield return new(nameof(this.TypeSpecifier), this.TypeSpecifier);
+                yield return new(nameof(this.ValueSpecifier), this.ValueSpecifier);
+                yield return new(nameof(this.Semicolon), this.Semicolon);
+            }
+        }
+
+        public override VariableDeclarationSyntax ToRedNode(SyntaxNode? parent) => new(parent, this);
+    }
+
+    /// <summary>
+    /// The var or val keyword.
+    /// </summary>
+    public SyntaxToken VarKeyword => this.Green.VarKeyword.ToRedNode(this);
+    /// <summary>
+    /// The name of the variable.
+    /// </summary>
+    public SyntaxToken Name => this.Green.Name.ToRedNode(this);
+    /// <summary>
+    /// The type specifier of the variable.
+    /// </summary>
+    public TypeSpecifierSyntax? TypeSpecifier => this.Green.TypeSpecifier?.ToRedNode(this);
+    /// <summary>
+    /// The value specifier of the variable.
+    /// </summary>
+    public ValueSpecifierSyntax? ValueSpecifier => this.Green.ValueSpecifier?.ToRedNode(this);
+    /// <summary>
+    /// The semicolon token.
+    /// </summary>
+    public SyntaxToken Semicolon => this.Green.Semicolon.ToRedNode(this);
+    internal override GreenNode Green { get; }
+
+    /// <summary>
+    /// Creates a new instance of the <see cref = "VariableDeclarationSyntax"> type.
+    /// </summary>
+    /// <param name = "parent">
+    /// The parent node of this one.
+    /// </param>
+    /// <param name = "green">
+    /// The wrapped green node.
+    /// </param>
+    internal VariableDeclarationSyntax(SyntaxNode? parent, GreenNode green)
+    {
+        this.Parent = parent;
+        this.Green = green;
+    }
+}
+
+/// <summary>
 /// A code block expression.
 /// </summary>
 public sealed partial class BlockExpressionSyntax : ExpressionSyntax
@@ -502,28 +790,36 @@ public sealed partial class BlockExpressionSyntax : ExpressionSyntax
     {
         public SyntaxToken.GreenNode OpenBrace { get; }
 
+        public SyntaxSequence<StatementSyntax.GreenNode> Statements { get; }
+
+        public ExpressionSyntax.GreenNode? Value { get; }
+
         public SyntaxToken.GreenNode CloseBrace { get; }
 
         /// <summary>
         /// Creates a new instance of the <see cref = "GreenNode"> type.
         /// </summary>
-        public GreenNode(SyntaxToken.GreenNode openBrace, SyntaxToken.GreenNode closeBrace)
+        public GreenNode(SyntaxToken.GreenNode openBrace, SyntaxSequence<StatementSyntax.GreenNode> statements, ExpressionSyntax.GreenNode? value, SyntaxToken.GreenNode closeBrace)
         {
             this.OpenBrace = openBrace;
+            this.Statements = statements;
+            this.Value = value;
             this.CloseBrace = closeBrace;
         }
 
         /// <inheritdoc/>
         public override bool Equals(object? other) => this.Equals(other as SyntaxNode.GreenNode);
         /// <inheritdoc/>
-        public override bool Equals([AllowNull] SyntaxNode.GreenNode other) => other is GreenNode o && object.Equals(this.OpenBrace, o.OpenBrace) && object.Equals(this.CloseBrace, o.CloseBrace);
+        public override bool Equals([AllowNull] SyntaxNode.GreenNode other) => other is GreenNode o && object.Equals(this.OpenBrace, o.OpenBrace) && object.Equals(this.Statements, o.Statements) && object.Equals(this.Value, o.Value) && object.Equals(this.CloseBrace, o.CloseBrace);
         /// <inheritdoc/>
-        public override int GetHashCode() => HashCode.Combine(this.OpenBrace, this.CloseBrace);
+        public override int GetHashCode() => HashCode.Combine(this.OpenBrace, this.Statements, this.Value, this.CloseBrace);
         public override IEnumerable<KeyValuePair<string, object?>> Children
         {
             get
             {
                 yield return new(nameof(this.OpenBrace), this.OpenBrace);
+                yield return new(nameof(this.Statements), this.Statements);
+                yield return new(nameof(this.Value), this.Value);
                 yield return new(nameof(this.CloseBrace), this.CloseBrace);
             }
         }
@@ -535,6 +831,14 @@ public sealed partial class BlockExpressionSyntax : ExpressionSyntax
     /// The open brace token.
     /// </summary>
     public SyntaxToken OpenBrace => this.Green.OpenBrace.ToRedNode(this);
+    /// <summary>
+    /// The statements in the block.
+    /// </summary>
+    public SyntaxSequence<StatementSyntax> Statements => new(this.Green.Statements.Underlying, n => (StatementSyntax)((StatementSyntax.GreenNode)n).ToRedNode(this));
+    /// <summary>
+    /// The value of the block expression.
+    /// </summary>
+    public ExpressionSyntax? Value => this.Green.Value?.ToRedNode(this);
     /// <summary>
     /// The close brace token.
     /// </summary>
@@ -551,6 +855,254 @@ public sealed partial class BlockExpressionSyntax : ExpressionSyntax
     /// The wrapped green node.
     /// </param>
     internal BlockExpressionSyntax(SyntaxNode? parent, GreenNode green)
+    {
+        this.Parent = parent;
+        this.Green = green;
+    }
+}
+
+/// <summary>
+/// An if expression.
+/// </summary>
+public sealed partial class IfExpressionSyntax : ExpressionSyntax
+{
+    new internal sealed partial class GreenNode : ExpressionSyntax.GreenNode
+    {
+        public SyntaxToken.GreenNode IfKeyword { get; }
+
+        public ExpressionSyntax.GreenNode Condition { get; }
+
+        public SyntaxToken.GreenNode ThenKeyword { get; }
+
+        public SyntaxNode.GreenNode Then { get; }
+
+        public SyntaxToken.GreenNode? ElseKeyword { get; }
+
+        public SyntaxNode.GreenNode? Else { get; }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref = "GreenNode"> type.
+        /// </summary>
+        public GreenNode(SyntaxToken.GreenNode ifKeyword, ExpressionSyntax.GreenNode condition, SyntaxToken.GreenNode thenKeyword, SyntaxNode.GreenNode then, SyntaxToken.GreenNode? elseKeyword, SyntaxNode.GreenNode? @else)
+        {
+            this.IfKeyword = ifKeyword;
+            this.Condition = condition;
+            this.ThenKeyword = thenKeyword;
+            this.Then = then;
+            this.ElseKeyword = elseKeyword;
+            this.Else = @else;
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object? other) => this.Equals(other as SyntaxNode.GreenNode);
+        /// <inheritdoc/>
+        public override bool Equals([AllowNull] SyntaxNode.GreenNode other) => other is GreenNode o && object.Equals(this.IfKeyword, o.IfKeyword) && object.Equals(this.Condition, o.Condition) && object.Equals(this.ThenKeyword, o.ThenKeyword) && object.Equals(this.Then, o.Then) && object.Equals(this.ElseKeyword, o.ElseKeyword) && object.Equals(this.Else, o.Else);
+        /// <inheritdoc/>
+        public override int GetHashCode() => HashCode.Combine(this.IfKeyword, this.Condition, this.ThenKeyword, this.Then, this.ElseKeyword, this.Else);
+        public override IEnumerable<KeyValuePair<string, object?>> Children
+        {
+            get
+            {
+                yield return new(nameof(this.IfKeyword), this.IfKeyword);
+                yield return new(nameof(this.Condition), this.Condition);
+                yield return new(nameof(this.ThenKeyword), this.ThenKeyword);
+                yield return new(nameof(this.Then), this.Then);
+                yield return new(nameof(this.ElseKeyword), this.ElseKeyword);
+                yield return new(nameof(this.Else), this.Else);
+            }
+        }
+
+        public override IfExpressionSyntax ToRedNode(SyntaxNode? parent) => new(parent, this);
+    }
+
+    /// <summary>
+    /// The if keyword.
+    /// </summary>
+    public SyntaxToken IfKeyword => this.Green.IfKeyword.ToRedNode(this);
+    /// <summary>
+    /// The condition of the if expression.
+    /// </summary>
+    public ExpressionSyntax Condition => this.Green.Condition.ToRedNode(this);
+    /// <summary>
+    /// The then keyword.
+    /// </summary>
+    public SyntaxToken ThenKeyword => this.Green.ThenKeyword.ToRedNode(this);
+    /// <summary>
+    /// The then part of the if expression.
+    /// </summary>
+    public SyntaxNode Then => this.Green.Then.ToRedNode(this);
+    /// <summary>
+    /// The else keyword.
+    /// </summary>
+    public SyntaxToken? ElseKeyword => this.Green.ElseKeyword?.ToRedNode(this);
+    /// <summary>
+    /// The else part of the if expression.
+    /// </summary>
+    public SyntaxNode? Else => this.Green.Else?.ToRedNode(this);
+    internal override GreenNode Green { get; }
+
+    /// <summary>
+    /// Creates a new instance of the <see cref = "IfExpressionSyntax"> type.
+    /// </summary>
+    /// <param name = "parent">
+    /// The parent node of this one.
+    /// </param>
+    /// <param name = "green">
+    /// The wrapped green node.
+    /// </param>
+    internal IfExpressionSyntax(SyntaxNode? parent, GreenNode green)
+    {
+        this.Parent = parent;
+        this.Green = green;
+    }
+}
+
+/// <summary>
+/// A while expression.
+/// </summary>
+public sealed partial class WhileExpressionSyntax : ExpressionSyntax
+{
+    new internal sealed partial class GreenNode : ExpressionSyntax.GreenNode
+    {
+        public SyntaxToken.GreenNode WhileKeyword { get; }
+
+        public ExpressionSyntax.GreenNode Condition { get; }
+
+        public SyntaxToken.GreenNode DoKeyword { get; }
+
+        public SyntaxNode.GreenNode Body { get; }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref = "GreenNode"> type.
+        /// </summary>
+        public GreenNode(SyntaxToken.GreenNode whileKeyword, ExpressionSyntax.GreenNode condition, SyntaxToken.GreenNode doKeyword, SyntaxNode.GreenNode body)
+        {
+            this.WhileKeyword = whileKeyword;
+            this.Condition = condition;
+            this.DoKeyword = doKeyword;
+            this.Body = body;
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object? other) => this.Equals(other as SyntaxNode.GreenNode);
+        /// <inheritdoc/>
+        public override bool Equals([AllowNull] SyntaxNode.GreenNode other) => other is GreenNode o && object.Equals(this.WhileKeyword, o.WhileKeyword) && object.Equals(this.Condition, o.Condition) && object.Equals(this.DoKeyword, o.DoKeyword) && object.Equals(this.Body, o.Body);
+        /// <inheritdoc/>
+        public override int GetHashCode() => HashCode.Combine(this.WhileKeyword, this.Condition, this.DoKeyword, this.Body);
+        public override IEnumerable<KeyValuePair<string, object?>> Children
+        {
+            get
+            {
+                yield return new(nameof(this.WhileKeyword), this.WhileKeyword);
+                yield return new(nameof(this.Condition), this.Condition);
+                yield return new(nameof(this.DoKeyword), this.DoKeyword);
+                yield return new(nameof(this.Body), this.Body);
+            }
+        }
+
+        public override WhileExpressionSyntax ToRedNode(SyntaxNode? parent) => new(parent, this);
+    }
+
+    /// <summary>
+    /// The while keyword.
+    /// </summary>
+    public SyntaxToken WhileKeyword => this.Green.WhileKeyword.ToRedNode(this);
+    /// <summary>
+    /// The condition of the while expression.
+    /// </summary>
+    public ExpressionSyntax Condition => this.Green.Condition.ToRedNode(this);
+    /// <summary>
+    /// The do keyword.
+    /// </summary>
+    public SyntaxToken DoKeyword => this.Green.DoKeyword.ToRedNode(this);
+    /// <summary>
+    /// The body of the while expression.
+    /// </summary>
+    public SyntaxNode Body => this.Green.Body.ToRedNode(this);
+    internal override GreenNode Green { get; }
+
+    /// <summary>
+    /// Creates a new instance of the <see cref = "WhileExpressionSyntax"> type.
+    /// </summary>
+    /// <param name = "parent">
+    /// The parent node of this one.
+    /// </param>
+    /// <param name = "green">
+    /// The wrapped green node.
+    /// </param>
+    internal WhileExpressionSyntax(SyntaxNode? parent, GreenNode green)
+    {
+        this.Parent = parent;
+        this.Green = green;
+    }
+}
+
+/// <summary>
+/// An expression in parenthesis.
+/// </summary>
+public sealed partial class GroupExpressionSyntax : SyntaxNode
+{
+    new internal sealed partial class GreenNode : SyntaxNode.GreenNode
+    {
+        public SyntaxToken.GreenNode OpenParenthesis { get; }
+
+        public ExpressionSyntax.GreenNode SubExpression { get; }
+
+        public SyntaxToken.GreenNode CloseParenthesis { get; }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref = "GreenNode"> type.
+        /// </summary>
+        public GreenNode(SyntaxToken.GreenNode openParenthesis, ExpressionSyntax.GreenNode subExpression, SyntaxToken.GreenNode closeParenthesis)
+        {
+            this.OpenParenthesis = openParenthesis;
+            this.SubExpression = subExpression;
+            this.CloseParenthesis = closeParenthesis;
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object? other) => this.Equals(other as SyntaxNode.GreenNode);
+        /// <inheritdoc/>
+        public override bool Equals([AllowNull] SyntaxNode.GreenNode other) => other is GreenNode o && object.Equals(this.OpenParenthesis, o.OpenParenthesis) && object.Equals(this.SubExpression, o.SubExpression) && object.Equals(this.CloseParenthesis, o.CloseParenthesis);
+        /// <inheritdoc/>
+        public override int GetHashCode() => HashCode.Combine(this.OpenParenthesis, this.SubExpression, this.CloseParenthesis);
+        public override IEnumerable<KeyValuePair<string, object?>> Children
+        {
+            get
+            {
+                yield return new(nameof(this.OpenParenthesis), this.OpenParenthesis);
+                yield return new(nameof(this.SubExpression), this.SubExpression);
+                yield return new(nameof(this.CloseParenthesis), this.CloseParenthesis);
+            }
+        }
+
+        public override GroupExpressionSyntax ToRedNode(SyntaxNode? parent) => new(parent, this);
+    }
+
+    /// <summary>
+    /// The open parenthesis token.
+    /// </summary>
+    public SyntaxToken OpenParenthesis => this.Green.OpenParenthesis.ToRedNode(this);
+    /// <summary>
+    /// The wrapped subexpression.
+    /// </summary>
+    public ExpressionSyntax SubExpression => this.Green.SubExpression.ToRedNode(this);
+    /// <summary>
+    /// The close parenthesis token.
+    /// </summary>
+    public SyntaxToken CloseParenthesis => this.Green.CloseParenthesis.ToRedNode(this);
+    internal override GreenNode Green { get; }
+
+    /// <summary>
+    /// Creates a new instance of the <see cref = "GroupExpressionSyntax"> type.
+    /// </summary>
+    /// <param name = "parent">
+    /// The parent node of this one.
+    /// </param>
+    /// <param name = "green">
+    /// The wrapped green node.
+    /// </param>
+    internal GroupExpressionSyntax(SyntaxNode? parent, GreenNode green)
     {
         this.Parent = parent;
         this.Green = green;
@@ -750,6 +1302,70 @@ public sealed partial class BinaryExpressionSyntax : ExpressionSyntax
 }
 
 /// <summary>
+/// A call expression.
+/// </summary>
+public sealed partial class CallExpressionSyntax : ExpressionSyntax
+{
+    new internal sealed partial class GreenNode : ExpressionSyntax.GreenNode
+    {
+        public ExpressionSyntax.GreenNode Called { get; }
+
+        public ArgumentListSyntax.GreenNode Arguments { get; }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref = "GreenNode"> type.
+        /// </summary>
+        public GreenNode(ExpressionSyntax.GreenNode called, ArgumentListSyntax.GreenNode arguments)
+        {
+            this.Called = called;
+            this.Arguments = arguments;
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object? other) => this.Equals(other as SyntaxNode.GreenNode);
+        /// <inheritdoc/>
+        public override bool Equals([AllowNull] SyntaxNode.GreenNode other) => other is GreenNode o && object.Equals(this.Called, o.Called) && object.Equals(this.Arguments, o.Arguments);
+        /// <inheritdoc/>
+        public override int GetHashCode() => HashCode.Combine(this.Called, this.Arguments);
+        public override IEnumerable<KeyValuePair<string, object?>> Children
+        {
+            get
+            {
+                yield return new(nameof(this.Called), this.Called);
+                yield return new(nameof(this.Arguments), this.Arguments);
+            }
+        }
+
+        public override CallExpressionSyntax ToRedNode(SyntaxNode? parent) => new(parent, this);
+    }
+
+    /// <summary>
+    /// The called expression.
+    /// </summary>
+    public ExpressionSyntax Called => this.Green.Called.ToRedNode(this);
+    /// <summary>
+    /// The argument list.
+    /// </summary>
+    public ArgumentListSyntax Arguments => this.Green.Arguments.ToRedNode(this);
+    internal override GreenNode Green { get; }
+
+    /// <summary>
+    /// Creates a new instance of the <see cref = "CallExpressionSyntax"> type.
+    /// </summary>
+    /// <param name = "parent">
+    /// The parent node of this one.
+    /// </param>
+    /// <param name = "green">
+    /// The wrapped green node.
+    /// </param>
+    internal CallExpressionSyntax(SyntaxNode? parent, GreenNode green)
+    {
+        this.Parent = parent;
+        this.Green = green;
+    }
+}
+
+/// <summary>
 /// Provides factory methods for the syntax nodes.
 /// </summary>
 public static partial class SyntaxFactory
@@ -804,7 +1420,7 @@ public static partial class SyntaxFactory
     /// <returns>
     /// The constructed syntax node.
     /// </returns>
-    public static FunctionDeclarationSyntax FunctionDeclaration(SyntaxToken funcKeyword, SyntaxToken name, ParameterListSyntax parameterList, TypeSpecifierSyntax? typeSpecifier, ExpressionSyntax body) => new(null, new(funcKeyword.Green, name.Green, parameterList.Green, typeSpecifier?.Green, body.Green));
+    public static FunctionDeclarationSyntax FunctionDeclaration(SyntaxToken funcKeyword, SyntaxToken name, ParameterListSyntax parameterList, TypeSpecifierSyntax? typeSpecifier, SyntaxNode body) => new(null, new(funcKeyword.Green, name.Green, parameterList.Green, typeSpecifier?.Green, body.Green));
     /// <summary>
     /// Constructs a <see cref = "ParameterListSyntax"/> from the given arguments.
     /// </summary>
@@ -838,6 +1454,22 @@ public static partial class SyntaxFactory
     /// </returns>
     public static ParameterSyntax Parameter(SyntaxToken name, TypeSpecifierSyntax typeSpecifier, SyntaxToken? comma) => new(null, new(name.Green, typeSpecifier.Green, comma?.Green));
     /// <summary>
+    /// Constructs a <see cref = "ArgumentListSyntax"/> from the given arguments.
+    /// </summary>
+    /// <param name = "openParenthesis">
+    /// The open parenthesis token.
+    /// </param>
+    /// <param name = "arguments">
+    /// The argument values.
+    /// </param>
+    /// <param name = "closeParenthesis">
+    /// The close parenthesis token.
+    /// </param>
+    /// <returns>
+    /// The constructed syntax node.
+    /// </returns>
+    public static ArgumentListSyntax ArgumentList(SyntaxToken openParenthesis, IEnumerable<ExpressionSyntax> arguments, SyntaxToken closeParenthesis) => new(null, new(openParenthesis.Green, SyntaxSequence(arguments.Select(n => n.Green)), closeParenthesis.Green));
+    /// <summary>
     /// Constructs a <see cref = "TypeSpecifierSyntax"/> from the given arguments.
     /// </summary>
     /// <param name = "colon">
@@ -851,10 +1483,64 @@ public static partial class SyntaxFactory
     /// </returns>
     public static TypeSpecifierSyntax TypeSpecifier(SyntaxToken colon, TypeSyntax type) => new(null, new(colon.Green, type.Green));
     /// <summary>
+    /// Constructs a <see cref = "ValueSpecifierSyntax"/> from the given arguments.
+    /// </summary>
+    /// <param name = "assign">
+    /// The assignment token.
+    /// </param>
+    /// <param name = "value">
+    /// The specified value.
+    /// </param>
+    /// <returns>
+    /// The constructed syntax node.
+    /// </returns>
+    public static ValueSpecifierSyntax ValueSpecifier(SyntaxToken assign, ExpressionSyntax value) => new(null, new(assign.Green, value.Green));
+    /// <summary>
+    /// Constructs a <see cref = "ExpressionStatementSyntax"/> from the given arguments.
+    /// </summary>
+    /// <param name = "expression">
+    /// The expression contained in the statement.
+    /// </param>
+    /// <param name = "semicolon">
+    /// The semicolon token.
+    /// </param>
+    /// <returns>
+    /// The constructed syntax node.
+    /// </returns>
+    public static ExpressionStatementSyntax ExpressionStatement(ExpressionSyntax expression, SyntaxToken? semicolon) => new(null, new(expression.Green, semicolon?.Green));
+    /// <summary>
+    /// Constructs a <see cref = "VariableDeclarationSyntax"/> from the given arguments.
+    /// </summary>
+    /// <param name = "varKeyword">
+    /// The var or val keyword.
+    /// </param>
+    /// <param name = "name">
+    /// The name of the variable.
+    /// </param>
+    /// <param name = "typeSpecifier">
+    /// The type specifier of the variable.
+    /// </param>
+    /// <param name = "valueSpecifier">
+    /// The value specifier of the variable.
+    /// </param>
+    /// <param name = "semicolon">
+    /// The semicolon token.
+    /// </param>
+    /// <returns>
+    /// The constructed syntax node.
+    /// </returns>
+    public static VariableDeclarationSyntax VariableDeclaration(SyntaxToken varKeyword, SyntaxToken name, TypeSpecifierSyntax? typeSpecifier, ValueSpecifierSyntax? valueSpecifier, SyntaxToken semicolon) => new(null, new(varKeyword.Green, name.Green, typeSpecifier?.Green, valueSpecifier?.Green, semicolon.Green));
+    /// <summary>
     /// Constructs a <see cref = "BlockExpressionSyntax"/> from the given arguments.
     /// </summary>
     /// <param name = "openBrace">
     /// The open brace token.
+    /// </param>
+    /// <param name = "statements">
+    /// The statements in the block.
+    /// </param>
+    /// <param name = "value">
+    /// The value of the block expression.
     /// </param>
     /// <param name = "closeBrace">
     /// The close brace token.
@@ -862,7 +1548,67 @@ public static partial class SyntaxFactory
     /// <returns>
     /// The constructed syntax node.
     /// </returns>
-    public static BlockExpressionSyntax BlockExpression(SyntaxToken openBrace, SyntaxToken closeBrace) => new(null, new(openBrace.Green, closeBrace.Green));
+    public static BlockExpressionSyntax BlockExpression(SyntaxToken openBrace, IEnumerable<StatementSyntax> statements, ExpressionSyntax? value, SyntaxToken closeBrace) => new(null, new(openBrace.Green, SyntaxSequence(statements.Select(n => n.Green)), value?.Green, closeBrace.Green));
+    /// <summary>
+    /// Constructs a <see cref = "IfExpressionSyntax"/> from the given arguments.
+    /// </summary>
+    /// <param name = "ifKeyword">
+    /// The if keyword.
+    /// </param>
+    /// <param name = "condition">
+    /// The condition of the if expression.
+    /// </param>
+    /// <param name = "thenKeyword">
+    /// The then keyword.
+    /// </param>
+    /// <param name = "then">
+    /// The then part of the if expression.
+    /// </param>
+    /// <param name = "elseKeyword">
+    /// The else keyword.
+    /// </param>
+    /// <param name = "@else">
+    /// The else part of the if expression.
+    /// </param>
+    /// <returns>
+    /// The constructed syntax node.
+    /// </returns>
+    public static IfExpressionSyntax IfExpression(SyntaxToken ifKeyword, ExpressionSyntax condition, SyntaxToken thenKeyword, SyntaxNode then, SyntaxToken? elseKeyword, SyntaxNode? @else) => new(null, new(ifKeyword.Green, condition.Green, thenKeyword.Green, then.Green, elseKeyword?.Green, @else?.Green));
+    /// <summary>
+    /// Constructs a <see cref = "WhileExpressionSyntax"/> from the given arguments.
+    /// </summary>
+    /// <param name = "whileKeyword">
+    /// The while keyword.
+    /// </param>
+    /// <param name = "condition">
+    /// The condition of the while expression.
+    /// </param>
+    /// <param name = "doKeyword">
+    /// The do keyword.
+    /// </param>
+    /// <param name = "body">
+    /// The body of the while expression.
+    /// </param>
+    /// <returns>
+    /// The constructed syntax node.
+    /// </returns>
+    public static WhileExpressionSyntax WhileExpression(SyntaxToken whileKeyword, ExpressionSyntax condition, SyntaxToken doKeyword, SyntaxNode body) => new(null, new(whileKeyword.Green, condition.Green, doKeyword.Green, body.Green));
+    /// <summary>
+    /// Constructs a <see cref = "GroupExpressionSyntax"/> from the given arguments.
+    /// </summary>
+    /// <param name = "openParenthesis">
+    /// The open parenthesis token.
+    /// </param>
+    /// <param name = "subExpression">
+    /// The wrapped subexpression.
+    /// </param>
+    /// <param name = "closeParenthesis">
+    /// The close parenthesis token.
+    /// </param>
+    /// <returns>
+    /// The constructed syntax node.
+    /// </returns>
+    public static GroupExpressionSyntax GroupExpression(SyntaxToken openParenthesis, ExpressionSyntax subExpression, SyntaxToken closeParenthesis) => new(null, new(openParenthesis.Green, subExpression.Green, closeParenthesis.Green));
     /// <summary>
     /// Constructs a <see cref = "IdentifierSyntax"/> from the given arguments.
     /// </summary>
@@ -902,6 +1648,19 @@ public static partial class SyntaxFactory
     /// The constructed syntax node.
     /// </returns>
     public static BinaryExpressionSyntax BinaryExpression(ExpressionSyntax left, SyntaxToken @operator, ExpressionSyntax right) => new(null, new(left.Green, @operator.Green, right.Green));
+    /// <summary>
+    /// Constructs a <see cref = "CallExpressionSyntax"/> from the given arguments.
+    /// </summary>
+    /// <param name = "called">
+    /// The called expression.
+    /// </param>
+    /// <param name = "arguments">
+    /// The argument list.
+    /// </param>
+    /// <returns>
+    /// The constructed syntax node.
+    /// </returns>
+    public static CallExpressionSyntax CallExpression(ExpressionSyntax called, ArgumentListSyntax arguments) => new(null, new(called.Green, arguments.Green));
 }
 #nullable restore
 #pragma warning restore CS0282
