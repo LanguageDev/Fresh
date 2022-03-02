@@ -211,8 +211,21 @@ public sealed class Parser
             }
             else
             {
-                // TODO
-                throw new NotImplementedException();
+                // This case is a little harder, this is potentially the value expression coming up
+                // We peek ahead a token and see if it's a declaration, statement, or an expression that can
+                // act as a statement
+                var head = this.Peek();
+                // Declaration and statement starting tokens are pretty simple
+                // They are always considered a statement
+                // Potential statement-like expressions ('if', 'while', block, ...) are parsed, and are
+                // promoted to statement, if there's no closing brace yet
+                // Anything else is parsed as an expression, and then promoted to statement, if a ';' follows
+                switch (head.Type)
+                {
+                default:
+                    // TODO: Proper error handling
+                    throw new NotImplementedException("TODO: Syntax error");
+                }
             }
         }
         var closeBrace = this.Expect(TokenType.CloseBrace);
