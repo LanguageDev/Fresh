@@ -41,11 +41,11 @@ public sealed class Parser
     public ModuleDeclarationSyntax ParseModuleDeclaration()
     {
         var declarations = new List<DeclarationSyntax.GreenNode>();
-        SyntaxToken.GreenNode end;
-        while (!this.TryMatch(TokenType.End, out end))
+        while (!this.TryPeek(TokenType.End))
         {
             declarations.Add(this.ParseDeclaration());
         }
+        var end = this.Expect(TokenType.End);
         return new(null, new(SyntaxFactory.SyntaxSequence(declarations), end));
     }
 
@@ -202,10 +202,18 @@ public sealed class Parser
         var openBrace = this.Expect(TokenType.OpenBrace);
         var statements = new List<StatementSyntax.GreenNode>();
         ExpressionSyntax.GreenNode? value = null;
-        while (true)
+        while (!this.TryPeek(TokenType.CloseBrace))
         {
-            // TODO
-            throw new NotImplementedException();
+            if (parseMode == ParseMode.Statement)
+            {
+                var statement = this.ParseStatement();
+                statements.Add(statement);
+            }
+            else
+            {
+                // TODO
+                throw new NotImplementedException();
+            }
         }
         var closeBrace = this.Expect(TokenType.CloseBrace);
         return new(openBrace, SyntaxFactory.SyntaxSequence(statements), value, closeBrace);
