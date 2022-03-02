@@ -188,16 +188,34 @@ public sealed class Parser
 
     private ExpressionSyntax.GreenNode ParseExpression()
     {
+        // TODO: Precedence table
+        throw new NotImplementedException();
+    }
+
+    private ExpressionSyntax.GreenNode ParseAtomicExpression()
+    {
         var head = this.Peek();
         return head.Token.Type switch
         {
+            TokenType.KeywordIf => this.ParseIfExpression(ParseMode.Expression),
+            TokenType.KeywordWhile => this.ParseWhileExpression(ParseMode.Expression),
             TokenType.OpenBrace => this.ParseBlockExpression(ParseMode.Expression),
+            TokenType.Identifier => new IdentifierSyntax.GreenNode(this.Take()),
+            TokenType.OpenParenthesis => this.ParseGroupExpression(),
             // TODO: Handle proper errors
             _ => throw new NotImplementedException(),
         };
     }
 
-    private BlockExpressionSyntax.GreenNode ParseBlockExpression(ParseMode parseMode)
+    private ExpressionSyntax.GreenNode ParseGroupExpression()
+    {
+        var openParen = this.Expect(TokenType.OpenParenthesis);
+        var expr = this.ParseExpression();
+        var closeParen = this.Expect(TokenType.CloseParenthesis);
+        return new GroupExpressionSyntax.GreenNode(openParen, expr, closeParen);
+    }
+
+    private ExpressionSyntax.GreenNode ParseBlockExpression(ParseMode parseMode)
     {
         var openBrace = this.Expect(TokenType.OpenBrace);
         var statements = new List<StatementSyntax.GreenNode>();
@@ -222,17 +240,51 @@ public sealed class Parser
                 // Anything else is parsed as an expression, and then promoted to statement, if a ';' follows
                 switch (head.Type)
                 {
+                case TokenType.KeywordFunc:
+                {
+                    var decl = this.ParseDeclaration();
+                    statements.Add(decl);
+                }
+                break;
+
+                case TokenType.KeywordVar:
+                case TokenType.KeywordVal:
+                {
+                    var stmt = this.ParseStatement();
+                    statements.Add(stmt);
+                }
+                break;
+
                 default:
-                    // TODO: Proper error handling
-                    throw new NotImplementedException("TODO: Syntax error");
+                {
+                    // Parse as an expression
+                    var expr = this.ParseExpression();
+                    if (this.TryPeek(TokenType.CloseBrace))
+                    {
+                        // This is the end of the block, this becomes the value
+                        value = expr;
+                    }
+                    else if (CanOmitSemicolon(expr))
+                    {
+                        // Can simply be promoted to a statement
+                        statements.Add(new ExpressionStatementSyntax.GreenNode(expr, null));
+                    }
+                    else
+                    {
+                        // Needs a semocilon
+                        var semicol = this.Expect(TokenType.Semicolon);
+                        statements.Add(new ExpressionStatementSyntax.GreenNode(expr, semicol));
+                    }
+                }
+                break;
                 }
             }
         }
         var closeBrace = this.Expect(TokenType.CloseBrace);
-        return new(openBrace, SyntaxFactory.SyntaxSequence(statements), value, closeBrace);
+        return new BlockExpressionSyntax.GreenNode(openBrace, SyntaxFactory.SyntaxSequence(statements), value, closeBrace);
     }
 
-    private IfExpressionSyntax.GreenNode ParseIfExpression(ParseMode parseMode)
+    private ExpressionSyntax.GreenNode ParseIfExpression(ParseMode parseMode)
     {
         var ifKw = this.Expect(TokenType.KeywordIf);
         var condition = this.ParseExpression();
@@ -245,16 +297,16 @@ public sealed class Parser
             elseKw = elseKw1;
             elseBody = this.ParseByParseMode(parseMode);
         }
-        return new(ifKw, condition, thenKw, thenBody, elseKw, elseBody);
+        return new IfExpressionSyntax.GreenNode(ifKw, condition, thenKw, thenBody, elseKw, elseBody);
     }
 
-    private WhileExpressionSyntax.GreenNode ParseWhileExpression(ParseMode parseMode)
+    private ExpressionSyntax.GreenNode ParseWhileExpression(ParseMode parseMode)
     {
         var whileKw = this.Expect(TokenType.KeywordWhile);
         var condition = this.ParseExpression();
         var doKw = this.Expect(TokenType.KeywordDo);
         var body = this.ParseByParseMode(parseMode);
-        return new(whileKw, condition, doKw, body);
+        return new WhileExpressionSyntax.GreenNode(whileKw, condition, doKw, body);
     }
 
     private TypeSyntax.GreenNode ParseType()
@@ -267,6 +319,15 @@ public sealed class Parser
     private SyntaxNode.GreenNode ParseByParseMode(ParseMode parseMode) => parseMode == ParseMode.Expression
         ? this.ParseExpression()
         : this.ParseStatement();
+
+    private static bool CanOmitSemicolon(SyntaxNode.GreenNode expr) => expr switch
+    {
+        BlockExpressionSyntax.GreenNode => true,
+        ExpressionStatementSyntax.GreenNode es => CanOmitSemicolon(es.Expression),
+        IfExpressionSyntax.GreenNode ifExpr => CanOmitSemicolon(ifExpr.Else ?? ifExpr.Then),
+        WhileExpressionSyntax.GreenNode whileExpr => CanOmitSemicolon(whileExpr.Body),
+        _ => false,
+    };
 
     // Elemental operations on syntax
 

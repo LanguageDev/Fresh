@@ -384,7 +384,7 @@
     {
       "name": "GroupExpressionSyntax",
       "doc": "An expression in parenthesis.",
-      "base": "SyntaxNode",
+      "base": "ExpressionSyntax",
       "fields": [
         {
           "name": "OpenParenthesis",

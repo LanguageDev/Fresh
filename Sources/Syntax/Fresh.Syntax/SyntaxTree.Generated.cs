@@ -1112,9 +1112,9 @@ public sealed partial class WhileExpressionSyntax : ExpressionSyntax
 /// <summary>
 /// An expression in parenthesis.
 /// </summary>
-public sealed partial class GroupExpressionSyntax : SyntaxNode
+public sealed partial class GroupExpressionSyntax : ExpressionSyntax
 {
-    new internal sealed partial class GreenNode : SyntaxNode.GreenNode
+    new internal sealed partial class GreenNode : ExpressionSyntax.GreenNode
     {
         public SyntaxToken.GreenNode OpenParenthesis { get; }
 
