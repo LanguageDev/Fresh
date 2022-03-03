@@ -22,7 +22,7 @@ func foo(x: int, y: bool): int {
 ";
         var sourceText = SourceText.FromString("foo.fresh", source);
         var tokens = Lexer.Lex(sourceText);
-        var syntaxTokens = SyntaxTokenStream.Process(tokens);
+        var syntaxTokens = SyntaxTokenLexer.ParseSyntaxTokens(tokens);
         var tree = Parser.Parse(syntaxTokens);
         Console.WriteLine(tree.ToDebugString());
         Console.WriteLine("\n==========\n");

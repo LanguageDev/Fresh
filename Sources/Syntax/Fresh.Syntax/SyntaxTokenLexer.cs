@@ -17,7 +17,7 @@ namespace Fresh.Syntax;
 /// Converts a stream of <see cref="Token"/>s into a stream of <see cref="SyntaxToken"/>s,
 /// which is essentially tokens with trivia attacked to them.
 /// </summary>
-public sealed class SyntaxTokenStream
+public sealed class SyntaxTokenLexer
 {
     /// <summary>
     /// Processes a sequence of raw <see cref="Token"/>s into a sequence of <see cref="SyntaxToken"/>s
@@ -25,9 +25,9 @@ public sealed class SyntaxTokenStream
     /// </summary>
     /// <param name="tokens">The sequence of tokens to process.</param>
     /// <returns>The sequence of syntax tokens made from <paramref name="tokens"/>.</returns>
-    public static IEnumerable<SyntaxToken> Process(IEnumerable<Token> tokens)
+    public static IEnumerable<SyntaxToken> ParseSyntaxTokens(IEnumerable<Token> tokens)
     {
-        var stream = new SyntaxTokenStream(tokens.GetEnumerator());
+        var stream = new SyntaxTokenLexer(tokens.GetEnumerator());
         while (true)
         {
             var t = stream.Next();
@@ -39,7 +39,7 @@ public sealed class SyntaxTokenStream
     private readonly IEnumerator<Token> tokens;
     private readonly RingBuffer<Token> peekBuffer = new();
 
-    private SyntaxTokenStream(IEnumerator<Token> tokens)
+    private SyntaxTokenLexer(IEnumerator<Token> tokens)
     {
         this.tokens = tokens;
     }
