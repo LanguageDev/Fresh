@@ -1358,6 +1358,70 @@ public sealed partial class PrefixUnaryExpressionSyntax : ExpressionSyntax
 }
 
 /// <summary>
+/// A postfix unary expression.
+/// </summary>
+public sealed partial class PostfixUnaryExpressionSyntax : ExpressionSyntax
+{
+    new internal sealed partial class GreenNode : ExpressionSyntax.GreenNode
+    {
+        public ExpressionSyntax.GreenNode Operand { get; }
+
+        public SyntaxToken.GreenNode Operator { get; }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref = "GreenNode"> type.
+        /// </summary>
+        public GreenNode(ExpressionSyntax.GreenNode operand, SyntaxToken.GreenNode @operator)
+        {
+            this.Operand = operand;
+            this.Operator = @operator;
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object? other) => this.Equals(other as SyntaxNode.GreenNode);
+        /// <inheritdoc/>
+        public override bool Equals([AllowNull] SyntaxNode.GreenNode other) => other is GreenNode o && object.Equals(this.Operand, o.Operand) && object.Equals(this.Operator, o.Operator);
+        /// <inheritdoc/>
+        public override int GetHashCode() => HashCode.Combine(this.Operand, this.Operator);
+        public override IEnumerable<KeyValuePair<string, object?>> Children
+        {
+            get
+            {
+                yield return new(nameof(this.Operand), this.Operand);
+                yield return new(nameof(this.Operator), this.Operator);
+            }
+        }
+
+        public override PostfixUnaryExpressionSyntax ToRedNode(SyntaxNode? parent) => new(parent, this);
+    }
+
+    /// <summary>
+    /// The operand expression.
+    /// </summary>
+    public ExpressionSyntax Operand => this.Green.Operand.ToRedNode(this);
+    /// <summary>
+    /// The operator token.
+    /// </summary>
+    public SyntaxToken Operator => this.Green.Operator.ToRedNode(this);
+    internal override GreenNode Green { get; }
+
+    /// <summary>
+    /// Creates a new instance of the <see cref = "PostfixUnaryExpressionSyntax"> type.
+    /// </summary>
+    /// <param name = "parent">
+    /// The parent node of this one.
+    /// </param>
+    /// <param name = "green">
+    /// The wrapped green node.
+    /// </param>
+    internal PostfixUnaryExpressionSyntax(SyntaxNode? parent, GreenNode green)
+    {
+        this.Parent = parent;
+        this.Green = green;
+    }
+}
+
+/// <summary>
 /// A binary expression.
 /// </summary>
 public sealed partial class BinaryExpressionSyntax : ExpressionSyntax
@@ -1786,6 +1850,19 @@ public static partial class SyntaxFactory
     /// The constructed syntax node.
     /// </returns>
     public static PrefixUnaryExpressionSyntax PrefixUnaryExpression(SyntaxToken @operator, ExpressionSyntax operand) => new(null, new(@operator.Green, operand.Green));
+    /// <summary>
+    /// Constructs a <see cref = "PostfixUnaryExpressionSyntax"/> from the given arguments.
+    /// </summary>
+    /// <param name = "operand">
+    /// The operand expression.
+    /// </param>
+    /// <param name = "@operator">
+    /// The operator token.
+    /// </param>
+    /// <returns>
+    /// The constructed syntax node.
+    /// </returns>
+    public static PostfixUnaryExpressionSyntax PostfixUnaryExpression(ExpressionSyntax operand, SyntaxToken @operator) => new(null, new(operand.Green, @operator.Green));
     /// <summary>
     /// Constructs a <see cref = "BinaryExpressionSyntax"/> from the given arguments.
     /// </summary>

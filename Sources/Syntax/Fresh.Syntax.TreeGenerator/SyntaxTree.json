@@ -445,6 +445,23 @@
       ]
     },
     {
+      "name": "PostfixUnaryExpressionSyntax",
+      "doc": "A postfix unary expression.",
+      "base": "ExpressionSyntax",
+      "fields": [
+        {
+          "name": "Operand",
+          "type": "ExpressionSyntax",
+          "doc": "The operand expression."
+        },
+        {
+          "name": "Operator",
+          "type": "SyntaxToken",
+          "doc": "The operator token."
+        }
+      ]
+    },
+    {
       "name": "BinaryExpressionSyntax",
       "doc": "A binary expression.",
       "base": "ExpressionSyntax",

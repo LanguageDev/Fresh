@@ -228,10 +228,97 @@ public sealed class Parser
         return new(openToken, SyntaxFactory.SyntaxSequence(arguments), closeToken);
     }
 
-    private ExpressionSyntax.GreenNode ParseExpression()
+    private ExpressionSyntax.GreenNode ParseExpression() => this.ParsePrecedence(0);
+
+    private ExpressionSyntax.GreenNode ParsePrecedence(int index)
     {
-        // TODO: Precedence table
-        throw new NotImplementedException();
+        // If out of precedence entries, we have passed the highest-precedence entries, time to parse atoms
+        if (index >= PrecedenceTable.Length) return this.ParseAtomicExpression();
+
+        // Otherwise we need to check what the current precedence level allows
+        var level = PrecedenceTable[index];
+        var peekType = this.Peek().Type;
+        if (level.Kind == OperatorKind.Prefix)
+        {
+            if (level.Operators.Any(op => op.Operator == peekType))
+            {
+                // A prefix operator is found on this same level, recurse without precedence change
+                var op = this.Take();
+                var subexpr = this.ParsePrecedence(index);
+                return new PrefixUnaryExpressionSyntax.GreenNode(op, subexpr);
+            }
+            else
+            {
+                // Not a prefix operator on this level, parse with higher precedence
+                return this.ParsePrecedence(index + 1);
+            }
+        }
+        else if (level.Kind == OperatorKind.Postfix)
+        {
+            // We start by parsing a higher precedence construct
+            var result = this.ParsePrecedence(index + 1);
+            // While there is an operator on the same level, we fold it in
+            while (level.Operators.Any(op => op.Operator == peekType))
+            {
+                var op = this.Take();
+                result = new PostfixUnaryExpressionSyntax.GreenNode(result, op);
+                peekType = this.Peek().Type;
+            }
+            return result;
+        }
+        else if (level.Kind == OperatorKind.CallLike)
+        {
+            // Initially we handle it like a postfix operator
+            // We start by parsing a higher precedence construct
+            var result = this.ParsePrecedence(index + 1);
+            // While there is an operator on the same level, we parse an argument list and expect the matching close operator
+            while (true)
+            {
+                var it = level.Operators.Where(op => op.Operator == peekType).GetEnumerator();
+                if (!it.MoveNext()) break;
+                // There is such an operator
+                var (expectedOpen, expectedClose) = it.Current;
+                var args = this.ParseArgumentList(expectedOpen, expectedClose!.Value);
+                result = new CallExpressionSyntax.GreenNode(result, args);
+                peekType = this.Peek().Type;
+            }
+            return result;
+        }
+        else if (level.Kind == OperatorKind.LeftAssociative)
+        {
+            // Each element will be a higher precedence construct left-folded for each operator here
+            var result = this.ParsePrecedence(index + 1);
+            if (level.Operators.Any(op => op.Operator == peekType))
+            {
+                var op = this.Take();
+                var right = this.ParsePrecedence(index + 1);
+                result = new BinaryExpressionSyntax.GreenNode(result, op, right);
+                peekType = this.Peek().Type;
+            }
+            return result;
+        }
+        else if (level.Kind == OperatorKind.RightAssociative)
+        {
+            // We start by parsing a higher precedence construct
+            var left = this.ParsePrecedence(index + 1);
+            if (level.Operators.Any(op => op.Operator == peekType))
+            {
+                // There's a right-associative operator on this level
+                var op = this.Take();
+                // Right-recurse, meaning no change in precedence for right operand
+                var right = this.ParsePrecedence(index);
+                return new BinaryExpressionSyntax.GreenNode(left, op, right);
+            }
+            else
+            {
+                // Nothing on this level
+                return left;
+            }
+        }
+        else
+        {
+            throw new InvalidOperationException();
+        }
     }
 
     private ExpressionSyntax.GreenNode ParseAtomicExpression()
