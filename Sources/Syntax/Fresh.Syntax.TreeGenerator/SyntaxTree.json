@@ -416,6 +416,18 @@
       ]
     },
     {
+      "name": "LiteralSyntax",
+      "doc": "A literal value.",
+      "base": "ExpressionSyntax",
+      "fields": [
+        {
+          "name": "Value",
+          "type": "SyntaxToken",
+          "doc": "The literal value token."
+        }
+      ]
+    },
+    {
       "name": "PrefixUnaryExpressionSyntax",
       "doc": "A prefix unary expression.",
       "base": "ExpressionSyntax",

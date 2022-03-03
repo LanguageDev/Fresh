@@ -18,17 +18,59 @@ namespace Fresh.Syntax;
 /// </summary>
 public sealed class Parser
 {
+    public static ModuleDeclarationSyntax Parse(IEnumerable<SyntaxToken> tokens)
+    {
+        var parser = new Parser(tokens.GetEnumerator());
+        return parser.ParseModuleDeclaration();
+    }
+
     private enum ParseMode
     {
         Expression,
         Statement,
     }
 
-    public static ModuleDeclarationSyntax Parse(IEnumerable<SyntaxToken> tokens)
+    private enum OperatorKind
     {
-        var parser = new Parser(tokens.GetEnumerator());
-        return parser.ParseModuleDeclaration();
+        Prefix,
+        Postfix,
+        CallLike,
+        LeftAssociative,
+        RightAssociative,
     }
+
+    private readonly record struct PredecenceDescriptor(OperatorKind Kind, OperatorDescriptor[] Operators);
+    private readonly record struct OperatorDescriptor(TokenType Operator, TokenType? CloseOperator);
+
+    private static PredecenceDescriptor PrefixOp(params TokenType[] operators) =>
+        new(OperatorKind.Prefix, operators.Select(o => new OperatorDescriptor(o, null)).ToArray());
+
+    private static PredecenceDescriptor PostfixOp(params TokenType[] operators) =>
+        new(OperatorKind.Postfix, operators.Select(o => new OperatorDescriptor(o, null)).ToArray());
+
+    private static PredecenceDescriptor LeftAssocOp(params TokenType[] operators) =>
+        new(OperatorKind.LeftAssociative, operators.Select(o => new OperatorDescriptor(o, null)).ToArray());
+
+    private static PredecenceDescriptor RightAssocOp(params TokenType[] operators) =>
+        new(OperatorKind.RightAssociative, operators.Select(o => new OperatorDescriptor(o, null)).ToArray());
+
+    private static PredecenceDescriptor CallOp(params (TokenType Open, TokenType Close)[] operators) =>
+        new(OperatorKind.CallLike, operators.Select(ops => new OperatorDescriptor(ops.Open, ops.Close)).ToArray());
+
+    // Low -> high precedence
+    private static readonly PredecenceDescriptor[] PrecedenceTable = new[]
+    {
+        RightAssocOp(TokenType.Assign), // TODO: Missing compound operators
+        // LeftAssocOp(TokenType.KeywordOr), // TODO: Missing or
+        // LeftAssocOp(TokenType.KeywordAnd), // TODO: Missing and
+        // LeftAssocOp(TokenType.KeywordNot), // TODO: Missing not
+        // LeftAssocOp(...), // TODO: Missing relational operators
+        // LeftAssocOp(...), // TODO: Missing +, -
+        // LeftAssocOp(...), // TODO: Missing *, /, mod, rem
+        // PrefixOp(...), // TODO: Missing +, -
+        // CallOp(...), // TODO: Missing call with () and []
+        // LeftAssocOp(...), // TODO: Missing member access
+    };
 
     private readonly IEnumerator<SyntaxToken> tokens;
     private readonly RingBuffer<SyntaxToken.GreenNode> peekBuffer = new();
@@ -200,8 +242,9 @@ public sealed class Parser
             TokenType.KeywordIf => this.ParseIfExpression(ParseMode.Expression),
             TokenType.KeywordWhile => this.ParseWhileExpression(ParseMode.Expression),
             TokenType.OpenBrace => this.ParseBlockExpression(ParseMode.Expression),
-            TokenType.Identifier => new IdentifierSyntax.GreenNode(this.Take()),
             TokenType.OpenParenthesis => this.ParseGroupExpression(),
+            TokenType.Identifier => new IdentifierSyntax.GreenNode(this.Take()),
+            TokenType.IntegerLiteral => new LiteralSyntax.GreenNode(this.Take()),
             // TODO: Handle proper errors
             _ => throw new NotImplementedException(),
         };

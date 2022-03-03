@@ -1238,6 +1238,62 @@ public sealed partial class IdentifierSyntax : TypeSyntax
 }
 
 /// <summary>
+/// A literal value.
+/// </summary>
+public sealed partial class LiteralSyntax : ExpressionSyntax
+{
+    new internal sealed partial class GreenNode : ExpressionSyntax.GreenNode
+    {
+        public SyntaxToken.GreenNode Value { get; }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref = "GreenNode"> type.
+        /// </summary>
+        public GreenNode(SyntaxToken.GreenNode value)
+        {
+            this.Value = value;
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object? other) => this.Equals(other as SyntaxNode.GreenNode);
+        /// <inheritdoc/>
+        public override bool Equals([AllowNull] SyntaxNode.GreenNode other) => other is GreenNode o && object.Equals(this.Value, o.Value);
+        /// <inheritdoc/>
+        public override int GetHashCode() => HashCode.Combine(this.Value);
+        public override IEnumerable<KeyValuePair<string, object?>> Children
+        {
+            get
+            {
+                yield return new(nameof(this.Value), this.Value);
+            }
+        }
+
+        public override LiteralSyntax ToRedNode(SyntaxNode? parent) => new(parent, this);
+    }
+
+    /// <summary>
+    /// The literal value token.
+    /// </summary>
+    public SyntaxToken Value => this.Green.Value.ToRedNode(this);
+    internal override GreenNode Green { get; }
+
+    /// <summary>
+    /// Creates a new instance of the <see cref = "LiteralSyntax"> type.
+    /// </summary>
+    /// <param name = "parent">
+    /// The parent node of this one.
+    /// </param>
+    /// <param name = "green">
+    /// The wrapped green node.
+    /// </param>
+    internal LiteralSyntax(SyntaxNode? parent, GreenNode green)
+    {
+        this.Parent = parent;
+        this.Green = green;
+    }
+}
+
+/// <summary>
 /// A prefix unary expression.
 /// </summary>
 public sealed partial class PrefixUnaryExpressionSyntax : ExpressionSyntax
@@ -1707,6 +1763,16 @@ public static partial class SyntaxFactory
     /// The constructed syntax node.
     /// </returns>
     public static IdentifierSyntax Identifier(SyntaxToken identifier) => new(null, new(identifier.Green));
+    /// <summary>
+    /// Constructs a <see cref = "LiteralSyntax"/> from the given arguments.
+    /// </summary>
+    /// <param name = "value">
+    /// The literal value token.
+    /// </param>
+    /// <returns>
+    /// The constructed syntax node.
+    /// </returns>
+    public static LiteralSyntax Literal(SyntaxToken value) => new(null, new(value.Green));
     /// <summary>
     /// Constructs a <see cref = "PrefixUnaryExpressionSyntax"/> from the given arguments.
     /// </summary>
