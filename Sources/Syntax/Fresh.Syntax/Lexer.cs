@@ -88,11 +88,24 @@ public sealed class Lexer
         case ')': return this.Take(1, TokenType.CloseParenthesis);
         case '{': return this.Take(1, TokenType.OpenBrace);
         case '}': return this.Take(1, TokenType.CloseBrace);
+        case '[': return this.Take(1, TokenType.OpenBracket);
+        case ']': return this.Take(1, TokenType.CloseBracket);
         case '.': return this.Take(1, TokenType.Dot);
         case ',': return this.Take(1, TokenType.Comma);
         case ':': return this.Take(1, TokenType.Colon);
         case ';': return this.Take(1, TokenType.Semicolon);
-        case '=': return this.Take(1, TokenType.Assign);
+        case '=': return this.Peek(1) == '=' ? this.Take(2, TokenType.OperatorEquals)
+                                             : this.Take(1, TokenType.Assign);
+        case '!': if (this.Peek(1) == '=') return this.Take(2, TokenType.OperatorNotEquals);
+                  break;
+        case '+': return this.Take(1, TokenType.OperatorPlus);
+        case '-': return this.Take(1, TokenType.OperatorMinus);
+        case '*': return this.Take(1, TokenType.OperatorMultiply);
+        case '/': return this.Take(1, TokenType.OperatorDivide);
+        case '>': return this.Peek(1) == '=' ? this.Take(2, TokenType.OperatorGreaterEquals)
+                                             : this.Take(1, TokenType.OperatorGreater);
+        case '<': return this.Peek(1) == '=' ? this.Take(2, TokenType.OperatorLessEquals)
+                                             : this.Take(1, TokenType.OperatorLess);
         }
 
         // A number
@@ -124,6 +137,11 @@ public sealed class Lexer
                 "else" => TokenType.KeywordElse,
                 "while" => TokenType.KeywordWhile,
                 "do" => TokenType.KeywordDo,
+                "or" => TokenType.OperatorOr,
+                "and" => TokenType.OperatorAnd,
+                "not" => TokenType.OperatorNot,
+                "mod" => TokenType.OperatorMod,
+                "rem" => TokenType.OperatorRem,
                 _ => TokenType.Identifier,
             };
             // Construct result

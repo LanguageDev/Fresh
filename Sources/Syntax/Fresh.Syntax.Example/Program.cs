@@ -17,6 +17,7 @@ internal class Program
 // With doc comment
 func foo(x: int, y: bool): int {
     // And this is a comment inside
+    var x: int = 1 < 2 < 3;
 }
 ";
         var sourceText = SourceText.FromString("foo.fresh", source);

@@ -61,15 +61,19 @@ public sealed class Parser
     private static readonly PredecenceDescriptor[] PrecedenceTable = new[]
     {
         RightAssocOp(TokenType.Assign), // TODO: Missing compound operators
-        // LeftAssocOp(TokenType.KeywordOr), // TODO: Missing or
-        // LeftAssocOp(TokenType.KeywordAnd), // TODO: Missing and
-        // LeftAssocOp(TokenType.KeywordNot), // TODO: Missing not
-        // LeftAssocOp(...), // TODO: Missing relational operators
-        // LeftAssocOp(...), // TODO: Missing +, -
-        // LeftAssocOp(...), // TODO: Missing *, /, mod, rem
-        // PrefixOp(...), // TODO: Missing +, -
-        // CallOp(...), // TODO: Missing call with () and []
-        // LeftAssocOp(...), // TODO: Missing member access
+        LeftAssocOp(TokenType.OperatorOr),
+        LeftAssocOp(TokenType.OperatorAnd),
+        LeftAssocOp(TokenType.OperatorNot),
+        LeftAssocOp(TokenType.OperatorEquals, TokenType.OperatorNotEquals,
+                    TokenType.OperatorGreater, TokenType.OperatorLess,
+                    TokenType.OperatorGreaterEquals, TokenType.OperatorLessEquals),
+        LeftAssocOp(TokenType.OperatorPlus, TokenType.OperatorMinus),
+        LeftAssocOp(TokenType.OperatorMultiply, TokenType.OperatorDivide,
+                    TokenType.OperatorMod, TokenType.OperatorRem),
+        PrefixOp(TokenType.OperatorPlus, TokenType.OperatorMinus),
+        CallOp((TokenType.OpenParenthesis, TokenType.CloseParenthesis),
+               (TokenType.OpenBracket, TokenType.CloseBracket)),
+        LeftAssocOp(TokenType.Dot),
     };
 
     private readonly IEnumerator<SyntaxToken> tokens;
@@ -237,10 +241,9 @@ public sealed class Parser
 
         // Otherwise we need to check what the current precedence level allows
         var level = PrecedenceTable[index];
-        var peekType = this.Peek().Type;
         if (level.Kind == OperatorKind.Prefix)
         {
-            if (level.Operators.Any(op => op.Operator == peekType))
+            if (level.Operators.Any(op => op.Operator == this.Peek().Type))
             {
                 // A prefix operator is found on this same level, recurse without precedence change
                 var op = this.Take();
@@ -258,11 +261,10 @@ public sealed class Parser
             // We start by parsing a higher precedence construct
             var result = this.ParsePrecedence(index + 1);
             // While there is an operator on the same level, we fold it in
-            while (level.Operators.Any(op => op.Operator == peekType))
+            while (level.Operators.Any(op => op.Operator == this.Peek().Type))
             {
                 var op = this.Take();
                 result = new PostfixUnaryExpressionSyntax.GreenNode(result, op);
-                peekType = this.Peek().Type;
             }
             return result;
         }
@@ -274,13 +276,12 @@ public sealed class Parser
             // While there is an operator on the same level, we parse an argument list and expect the matching close operator
             while (true)
             {
-                var it = level.Operators.Where(op => op.Operator == peekType).GetEnumerator();
+                var it = level.Operators.Where(op => op.Operator == this.Peek().Type).GetEnumerator();
                 if (!it.MoveNext()) break;
                 // There is such an operator
                 var (expectedOpen, expectedClose) = it.Current;
                 var args = this.ParseArgumentList(expectedOpen, expectedClose!.Value);
                 result = new CallExpressionSyntax.GreenNode(result, args);
-                peekType = this.Peek().Type;
             }
             return result;
         }
@@ -288,12 +289,11 @@ public sealed class Parser
         {
             // Each element will be a higher precedence construct left-folded for each operator here
             var result = this.ParsePrecedence(index + 1);
-            if (level.Operators.Any(op => op.Operator == peekType))
+            while (level.Operators.Any(op => op.Operator == this.Peek().Type))
             {
                 var op = this.Take();
                 var right = this.ParsePrecedence(index + 1);
                 result = new BinaryExpressionSyntax.GreenNode(result, op, right);
-                peekType = this.Peek().Type;
             }
             return result;
         }
@@ -301,7 +301,7 @@ public sealed class Parser
         {
             // We start by parsing a higher precedence construct
             var left = this.ParsePrecedence(index + 1);
-            if (level.Operators.Any(op => op.Operator == peekType))
+            if (level.Operators.Any(op => op.Operator == this.Peek().Type))
             {
                 // There's a right-associative operator on this level
                 var op = this.Take();

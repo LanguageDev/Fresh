@@ -72,6 +72,16 @@ public enum TokenType
     CloseBrace,
 
     /// <summary>
+    /// '['.
+    /// </summary>
+    OpenBracket,
+
+    /// <summary>
+    /// ']'.
+    /// </summary>
+    CloseBracket,
+
+    /// <summary>
     /// '.'.
     /// </summary>
     Dot,
@@ -135,6 +145,81 @@ public enum TokenType
     /// The 'do' keyword.
     /// </summary>
     KeywordDo,
+
+    /// <summary>
+    /// The 'or' operator.
+    /// </summary>
+    OperatorOr,
+
+    /// <summary>
+    /// The 'and' operator.
+    /// </summary>
+    OperatorAnd,
+
+    /// <summary>
+    /// The 'not' operator.
+    /// </summary>
+    OperatorNot,
+
+    /// <summary>
+    /// The 'not' operator.
+    /// </summary>
+    OperatorMod,
+
+    /// <summary>
+    /// The 'rem' operator.
+    /// </summary>
+    OperatorRem,
+
+    /// <summary>
+    /// The '>' operator.
+    /// </summary>
+    OperatorGreater,
+
+    /// <summary>
+    /// The '<' operator.
+    /// </summary>
+    OperatorLess,
+
+    /// <summary>
+    /// The '>=' operator.
+    /// </summary>
+    OperatorGreaterEquals,
+
+    /// <summary>
+    /// The '<=' operator.
+    /// </summary>
+    OperatorLessEquals,
+
+    /// <summary>
+    /// The '==' operator.
+    /// </summary>
+    OperatorEquals,
+
+    /// <summary>
+    /// The '!=' operator.
+    /// </summary>
+    OperatorNotEquals,
+
+    /// <summary>
+    /// The '+' operator.
+    /// </summary>
+    OperatorPlus,
+
+    /// <summary>
+    /// The '-' operator.
+    /// </summary>
+    OperatorMinus,
+
+    /// <summary>
+    /// The '*' operator.
+    /// </summary>
+    OperatorMultiply,
+
+    /// <summary>
+    /// The '/' operator.
+    /// </summary>
+    OperatorDivide,
 
     /// <summary>
     /// A general identifier.
