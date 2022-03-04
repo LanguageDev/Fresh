@@ -470,9 +470,16 @@ public sealed class Parser
 
     private bool TryMatch(TokenType tokenType, [MaybeNullWhen(false)] out SyntaxToken.GreenNode token)
     {
-        if (!this.TryPeek(0, out token) || token.Type != tokenType) return false;
-        token = this.Take();
-        return true;
+        if (this.TryPeek(tokenType))
+        {
+            token = this.Take();
+            return true;
+        }
+        else
+        {
+            token = default;
+            return false;
+        }
     }
 
     private bool TryPeek(TokenType tokenType) =>
@@ -480,7 +487,7 @@ public sealed class Parser
 
     private SyntaxToken.GreenNode Take()
     {
-        if (!this.TryPeek(0, out _)) throw new InvalidOperationException($"Could nod take a token");
+        this.Peek();
         return this.peekBuffer.RemoveFront();
     }
 
