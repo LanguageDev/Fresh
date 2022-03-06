@@ -55,6 +55,40 @@ public sealed class SourceText
         this.text = text;
     }
 
+    /// <summary>
+    /// Retrieves a location from the given offset.
+    /// </summary>
+    /// <param name="offset">The offset to get the location for.</param>
+    /// <param name="width">The width of the location.</param>
+    /// <returns>The location that is <paramref name="offset"/> characters away from the start of the source
+    /// and spans <paramref name="width"/> characters.</returns>
+    public Location GetLocation(int offset, int width) => new(this, this.GetRange(offset, width));
+
+    /// <summary>
+    /// Retrieves a range from the given offset.
+    /// </summary>
+    /// <param name="offset">The offset to get the range for.</param>
+    /// <param name="width">The width of the range.</param>
+    /// <returns>The range that is <paramref name="offset"/> characters away from the start of the source
+    /// and spans <paramref name="width"/> characters.</returns>
+    public Range GetRange(int offset, int width)
+    {
+        // TODO: Very inefficient but good enough for now.
+        var cursor = default(Cursor);
+        // Walk up to the start
+        offset = Math.Min(offset, this.text.Length);
+        for (var i = 0; i < offset && i < offset; ++i) cursor.Append(this.text[i]);
+        // Save the start position
+        var start = cursor.Position;
+        // Walk to the end
+        var endOffset = Math.Min(offset + width, this.text.Length);
+        for (var i = offset; i < endOffset; ++i) cursor.Append(this.text[i]);
+        // Save the end position
+        var end = cursor.Position;
+        // Construct location
+        return new(start, end);
+    }
+
     private List<ReadOnlyMemory<char>> ComputeLines()
     {
         var result = new List<ReadOnlyMemory<char>>();

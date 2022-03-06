@@ -419,27 +419,29 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
         ISyntaxElement syntaxElement,
         List<SyntaxError> buffer)
     {
+        // Add leading trivia before to have a more exact position of the error
+        offset += syntaxElement.LeadingTrivia.Sum(t => t.Text.Length);
+
         // Leaf
         if (syntaxElement is SyntaxToken syntaxToken)
         {
-            if (syntaxToken.Type is TokenType.Unknown or TokenType.Missing)
+            if (syntaxToken.Type == TokenType.Missing)
             {
-                var location = sourceText.GetLocation(offset);
+                var location = sourceText.GetLocation(offset, syntaxToken.Token.Text.Length);
                 buffer.Add(new(location, syntaxToken.Token.Text));
             }
-            // Offset by width
-            offset += syntaxToken.Width;
-            return;
+
+            // Offset by the token itself
+            offset += syntaxToken.Token.Text.Length;
         }
-        // Non-leaf
-        if (syntaxElement is DeclarationErrorSyntax declError)
+        else if (syntaxElement is DeclarationErrorSyntax declError)
         {
-            var location = sourceText.GetLocation(offset);
+            var location = sourceText.GetLocation(offset, declError.Token?.Token.Text.Length ?? 1);
             buffer.Add(new(location, declError.Description));
         }
         else if (syntaxElement is ExpressionErrorSyntax exprErrpr)
         {
-            var location = sourceText.GetLocation(offset);
+            var location = sourceText.GetLocation(offset, exprErrpr.Token?.Token.Text.Length ?? 1);
             buffer.Add(new(location, exprErrpr.Description));
         }
         // Just go through children
@@ -447,6 +449,9 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
         {
             if (child is ISyntaxElement e) CollectErrorsImpl(sourceText, ref offset, e, buffer);
         }
+
+        // Trailing trivia offset
+        offset += syntaxElement.TrailingTrivia.Sum(t => t.Text.Length);
     }
 
     private static string ToDebugString(string text) => $"\"{EscapeString(text)}\"";
