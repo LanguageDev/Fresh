@@ -310,6 +310,7 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
             .Cast<object?>()
             .Select(GetLastToken)
             .Last(t => t is not null)!.Value,
+        null => null,
         _ => throw new InvalidOperationException(),
     };
 
@@ -419,12 +420,15 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
         ISyntaxElement syntaxElement,
         List<SyntaxError> buffer)
     {
-        // Add leading trivia before to have a more exact position of the error
-        offset += syntaxElement.LeadingTrivia.Sum(t => t.Text.Length);
+        // TODO: Make some proper syntax tree walker, it's painful to reimplement this over and over
+        // TODO: Cleanup, lot of duplication
 
         // Leaf
         if (syntaxElement is SyntaxToken syntaxToken)
         {
+            // Add leading trivia before to have a more exact position of the error
+            offset += syntaxElement.LeadingTrivia.Sum(t => t.Text.Length);
+
             if (syntaxToken.Type == TokenType.Missing)
             {
                 var location = sourceText.GetLocation(offset, syntaxToken.Token.Text.Length);
@@ -433,25 +437,39 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
 
             // Offset by the token itself
             offset += syntaxToken.Token.Text.Length;
+
+            // Trailing trivia offset
+            offset += syntaxElement.TrailingTrivia.Sum(t => t.Text.Length);
         }
         else if (syntaxElement is DeclarationErrorSyntax declError)
         {
-            var location = sourceText.GetLocation(offset, declError.Token?.Token.Text.Length ?? 1);
+            // TODO: Cleanup, lot of duplication
+            var leadingTriviaOffs = syntaxElement.LeadingTrivia.Sum(t => t.Text.Length);
+            var location = sourceText.GetLocation(offset + leadingTriviaOffs, declError.Token?.Token.Text.Length ?? 1);
             buffer.Add(new(location, declError.Description));
         }
         else if (syntaxElement is ExpressionErrorSyntax exprErrpr)
         {
-            var location = sourceText.GetLocation(offset, exprErrpr.Token?.Token.Text.Length ?? 1);
+            // TODO: Cleanup, lot of duplication
+            var leadingTriviaOffs = syntaxElement.LeadingTrivia.Sum(t => t.Text.Length);
+            var location = sourceText.GetLocation(offset + leadingTriviaOffs, exprErrpr.Token?.Token.Text.Length ?? 1);
             buffer.Add(new(location, exprErrpr.Description));
         }
         // Just go through children
         foreach (var (_, child) in syntaxElement.Children)
         {
-            if (child is ISyntaxElement e) CollectErrorsImpl(sourceText, ref offset, e, buffer);
+            if (child is ISyntaxElement elem)
+            {
+                CollectErrorsImpl(sourceText, ref offset, elem, buffer);
+            }
+            else if (child is IEnumerable coll)
+            {
+                foreach (var item in coll)
+                {
+                    if (item is ISyntaxElement e) CollectErrorsImpl(sourceText, ref offset, e, buffer);
+                }
+            }
         }
-
-        // Trailing trivia offset
-        offset += syntaxElement.TrailingTrivia.Sum(t => t.Text.Length);
     }
 
     private static string ToDebugString(string text) => $"\"{EscapeString(text)}\"";

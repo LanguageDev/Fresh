@@ -13,7 +13,7 @@ internal class Program
 // Starts from the first line comment
 // And comments stick together!
 
-hello
+    hello
 
 // This is a function
 // With doc comment
@@ -29,5 +29,18 @@ func foo(x: int, y: bool): int {
         Console.WriteLine(tree.ToDebugString());
         Console.WriteLine("\n==========\n");
         Console.WriteLine(tree.ToSourceText());
+        Console.WriteLine("\n==========\n");
+        var errors = tree.CollectErrors();
+        foreach (var err in errors)
+        {
+            Console.WriteLine($"Syntax error [{PrettyLocation(err.Location)}]: {err.Message}");
+        }
+    }
+
+    private static string PrettyLocation(Location location)
+    {
+        var start = location.Start;
+        var end = location.End;
+        return $"{location.Source.Name}:{start.Line}:{start.Column}";
     }
 }
