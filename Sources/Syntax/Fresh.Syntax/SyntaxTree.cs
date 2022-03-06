@@ -244,6 +244,19 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
         return builder.ToString();
     }
 
+    /// <summary>
+    /// Collects the syntax errors in this tree into a sequence.
+    /// </summary>
+    /// <returns>The sequence of <see cref="SyntaxError"/>s.</returns>
+    public Sequence<SyntaxError> CollectErrors()
+    {
+        var sourceText = GetFirstToken(this)!.Value.Token.SourceText;
+        var offset = 0;
+        var buffer = new List<SyntaxError>();
+        CollectErrorsImpl(sourceText, ref offset, this, buffer);
+        return new(buffer);
+    }
+
     private object? ToRedObject(object? value) => value switch
     {
         GreenNode g => g.ToRedNode(this),
@@ -379,6 +392,44 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
 
         // Best-effort
         builder.Append(value.ToString());
+    }
+
+    private static void CollectErrorsImpl(
+        SourceText sourceText,
+        ref int offset,
+        ISyntaxElement syntaxElement,
+        List<SyntaxError> buffer)
+    {
+        // Leaf
+        if (syntaxElement is SyntaxToken syntaxToken)
+        {
+            if (syntaxToken.Type is TokenType.Unknown or TokenType.Missing)
+            {
+                var location = sourceText.GetLocation(offset);
+                buffer.Add(new(location, syntaxToken.Token.Text));
+            }
+            // Offset by width
+            offset += syntaxToken.LeadingTrivia.Sum(t => t.Text.Length);
+            offset += syntaxToken.Token.Text.Length;
+            offset += syntaxToken.TrailingTrivia.Sum(t => t.Text.Length);
+            return;
+        }
+        // Non-leaf
+        if (syntaxElement is DeclarationErrorSyntax declError)
+        {
+            var location = sourceText.GetLocation(offset);
+            buffer.Add(new(location, declError.Description));
+        }
+        else if (syntaxElement is ExpressionErrorSyntax exprErrpr)
+        {
+            var location = sourceText.GetLocation(offset);
+            buffer.Add(new(location, exprErrpr.Description));
+        }
+        // Just go through children
+        foreach (var (_, child) in syntaxElement.Children)
+        {
+            if (child is ISyntaxElement e) CollectErrorsImpl(sourceText, ref offset, e, buffer);
+        }
     }
 
     private static string ToDebugString(string text) => $"\"{EscapeString(text)}\"";
