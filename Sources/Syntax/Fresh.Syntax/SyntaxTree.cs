@@ -22,6 +22,11 @@ namespace Fresh.Syntax;
 public interface ISyntaxElement
 {
     /// <summary>
+    /// The width of this element in characters.
+    /// </summary>
+    public int Width { get; }
+
+    /// <summary>
     /// The leading trivia of the syntax element.
     /// </summary>
     public Sequence<Token> LeadingTrivia { get; }
@@ -52,9 +57,15 @@ public partial struct SyntaxToken
 {
     internal partial struct GreenNode
     {
+        public int Width => this.LeadingTrivia.Sum(t => t.Text.Length)
+                          + this.Token.Text.Length
+                          + this.TrailingTrivia.Sum(t => t.Text.Length);
         public TokenType Type => this.Token.Type;
         public CommentGroup? Documentation => null;
     }
+
+    /// <inheritdoc/>
+    public int Width => this.Green.Width;
 
     /// <summary>
     /// The type of the token.
@@ -168,6 +179,11 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
 {
     internal abstract class GreenNode : ISyntaxElement, IEquatable<GreenNode>
     {
+        public int Width => this.Children
+            .Select(kv => kv.Value)
+            .OfType<ISyntaxElement>()
+            .Sum(e => e.Width);
+
         public Sequence<Token> LeadingTrivia => GetFirstToken(this)!.Value.LeadingTrivia;
 
         public Sequence<Token> TrailingTrivia => GetLastToken(this)!.Value.TrailingTrivia;
@@ -184,6 +200,9 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
 
         public abstract SyntaxNode ToRedNode(SyntaxNode? parent);
     }
+
+    /// <inheritdoc/>
+    public int Width => this.Green.Width;
 
     /// <inheritdoc/>
     public Sequence<Token> LeadingTrivia => this.Green.LeadingTrivia;
@@ -409,9 +428,7 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
                 buffer.Add(new(location, syntaxToken.Token.Text));
             }
             // Offset by width
-            offset += syntaxToken.LeadingTrivia.Sum(t => t.Text.Length);
-            offset += syntaxToken.Token.Text.Length;
-            offset += syntaxToken.TrailingTrivia.Sum(t => t.Text.Length);
+            offset += syntaxToken.Width;
             return;
         }
         // Non-leaf
