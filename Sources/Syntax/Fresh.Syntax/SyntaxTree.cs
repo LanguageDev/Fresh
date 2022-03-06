@@ -289,7 +289,7 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
             foreach (var (_, child) in syntaxElement.Children) WriteSourceTextImpl(writer, child);
             break;
 
-        case IEnumerable enumerable:
+        case IEnumerable enumerable when enumerable is not string:
             foreach (var item in enumerable) WriteSourceTextImpl(writer, item);
             break;
 
@@ -325,7 +325,7 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
         }
 
         // Sequences
-        if (value is IEnumerable enumerable)
+        if (value is IEnumerable enumerable and not string)
         {
             builder.AppendLine("[");
             foreach (var obj in enumerable)

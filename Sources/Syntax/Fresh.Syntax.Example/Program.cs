@@ -13,6 +13,8 @@ internal class Program
 // Starts from the first line comment
 // And comments stick together!
 
+hello
+
 // This is a function
 // With doc comment
 func foo(x: int, y: bool): int {

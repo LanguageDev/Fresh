@@ -61,6 +61,44 @@
       "isAbstract": true
     },
     {
+      "name": "DeclarationErrorSyntax",
+      "doc": "Represents a declaration syntax error in the syntax tree.",
+      "base": "DeclarationSyntax",
+      "fields": [
+        {
+          "name": "Token",
+          "type": "SyntaxToken",
+          "isOptional": true,
+          "doc": "The error token."
+        },
+        {
+          "name": "Description",
+          "type": "string",
+          "ignoreChild": true,
+          "doc": "The error description."
+        }
+      ]
+    },
+    {
+      "name": "ExpressionErrorSyntax",
+      "doc": "Represents an expression syntax error in the syntax tree.",
+      "base": "TypeSyntax",
+      "fields": [
+        {
+          "name": "Token",
+          "type": "SyntaxToken",
+          "isOptional": true,
+          "doc": "The error token."
+        },
+        {
+          "name": "Description",
+          "type": "string",
+          "ignoreChild": true,
+          "doc": "The error description."
+        }
+      ]
+    },
+    {
       "name": "ModuleDeclarationSyntax",
       "doc": "A full, parsed module containing all of its declarations.",
       "base": "DeclarationSyntax",

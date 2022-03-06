@@ -210,7 +210,7 @@ public sealed class Generator
                 modifiers: Modifiers.Public | Modifiers.Override,
                 type: "IEnumerable<KeyValuePair<string, object?>>",
                 name: "Children");
-            foreach (var field in node.Fields)
+            foreach (var field in node.Fields.Where(f => !f.IgnoreChild))
             {
                 this.codeBuilder.WriteLine($"yield return new(nameof(this.{field.Name}), this.{field.Name});");
             }

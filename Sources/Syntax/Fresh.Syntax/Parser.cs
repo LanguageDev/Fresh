@@ -79,6 +79,8 @@ public sealed class Parser
     private readonly IEnumerator<SyntaxToken> tokens;
     private readonly RingBuffer<SyntaxToken.GreenNode> peekBuffer = new();
 
+    private SourceText SourceText => this.Peek().Token.SourceText;
+
     private Parser(IEnumerator<SyntaxToken> tokenSource)
     {
         this.tokens = tokenSource;
@@ -101,8 +103,7 @@ public sealed class Parser
         return head.Token.Type switch
         {
             TokenType.KeywordFunc => this.ParseFunctionDeclaration(),
-            // TODO: Handle proper errors
-            _ => throw new NotImplementedException(),
+            _ => new DeclarationErrorSyntax.GreenNode(this.Take(), "Unexpected token."),
         };
     }
 
@@ -131,12 +132,7 @@ public sealed class Parser
 
     private VariableDeclarationSyntax.GreenNode ParseVariableDeclaration()
     {
-        if (!this.TryPeek(TokenType.KeywordVar) && !this.TryPeek(TokenType.KeywordVal))
-        {
-            // TODO: Proper error
-            throw new NotImplementedException("TODO: Syntax error");
-        }
-        var kw = this.Take();
+        var kw = this.Expect(TokenType.KeywordVar, TokenType.KeywordVal);
         var name = this.Expect(TokenType.Identifier);
         // Type
         TypeSpecifierSyntax.GreenNode? typeSpecifier = null;
@@ -184,8 +180,7 @@ public sealed class Parser
         }
         else
         {
-            // TODO: Proper error
-            throw new NotImplementedException("TODO: Syntax error");
+            body = new ExpressionErrorSyntax.GreenNode(null, "Function body expected.");
         }
         return new(funcKw, name, paramList, typeSpecifier, body);
     }
@@ -332,8 +327,7 @@ public sealed class Parser
             TokenType.OpenParenthesis => this.ParseGroupExpression(),
             TokenType.Identifier => new IdentifierSyntax.GreenNode(this.Take()),
             TokenType.IntegerLiteral => new LiteralSyntax.GreenNode(this.Take()),
-            // TODO: Handle proper errors
-            _ => throw new NotImplementedException(),
+            _ => new ExpressionErrorSyntax.GreenNode(this.Take(), "Unexpected token in expression."),
         };
     }
 
@@ -442,8 +436,7 @@ public sealed class Parser
     private TypeSyntax.GreenNode ParseType()
     {
         if (this.TryMatch(TokenType.Identifier, out var typeIdent)) return new IdentifierSyntax.GreenNode(typeIdent);
-        // TODO: Handle proper errors
-        throw new NotImplementedException();
+        return new ExpressionErrorSyntax.GreenNode(this.Take(), "Unexpected token in type");
     }
 
     private SyntaxNode.GreenNode ParseByParseMode(ParseMode parseMode) => parseMode == ParseMode.Expression
@@ -461,10 +454,24 @@ public sealed class Parser
 
     // Elemental operations on syntax
 
+    private SyntaxToken.GreenNode MakeMissingToken(IEnumerable<TokenType> tokenTypes) =>
+        this.MakeMissingElement(tokenTypes.Select(tt => tt.ToString()));
+
+    private SyntaxToken.GreenNode MakeMissingElement(IEnumerable<string> elementNames) => new(
+        leadingTrivia: Sequence<Token>.Empty,
+        token: new(this.SourceText, TokenType.Missing, string.Join(" or ", elementNames)),
+        trailingTrivia: Sequence<Token>.Empty);
+
+    private SyntaxToken.GreenNode Expect(params TokenType[] tokenTypes)
+    {
+        var peekType = this.Peek().Type;
+        if (!tokenTypes.Contains(peekType)) return this.MakeMissingToken(tokenTypes);
+        return this.Take();
+    }
+
     private SyntaxToken.GreenNode Expect(TokenType tokenType)
     {
-        // TODO: Proper errors
-        if (!this.TryMatch(tokenType, out var t)) throw new NotImplementedException("TODO: Syntax error");
+        if (!this.TryMatch(tokenType, out var t)) return this.MakeMissingToken(new[] { tokenType });
         return t;
     }
 
@@ -494,8 +501,8 @@ public sealed class Parser
     private SyntaxToken.GreenNode Peek()
     {
         // NOTE: This should probably never fail when called because there must be an end token
-        // TODO: Proper errors
-        if (!this.TryPeek(0, out var t)) throw new InvalidOperationException("TODO: Error");
+        var peekResult = this.TryPeek(0, out var t);
+        Debug.Assert(peekResult);
         return t;
     }
 

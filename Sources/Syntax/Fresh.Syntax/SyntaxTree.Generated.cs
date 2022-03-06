@@ -134,6 +134,132 @@ public abstract partial class DeclarationSyntax : StatementSyntax
 }
 
 /// <summary>
+/// Represents a declaration syntax error in the syntax tree.
+/// </summary>
+public sealed partial class DeclarationErrorSyntax : DeclarationSyntax
+{
+    new internal sealed partial class GreenNode : DeclarationSyntax.GreenNode
+    {
+        public SyntaxToken.GreenNode? Token { get; }
+
+        public string Description { get; }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref = "GreenNode"> type.
+        /// </summary>
+        public GreenNode(SyntaxToken.GreenNode? token, string description)
+        {
+            this.Token = token;
+            this.Description = description;
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object? other) => this.Equals(other as SyntaxNode.GreenNode);
+        /// <inheritdoc/>
+        public override bool Equals([AllowNull] SyntaxNode.GreenNode other) => other is GreenNode o && object.Equals(this.Token, o.Token) && object.Equals(this.Description, o.Description);
+        /// <inheritdoc/>
+        public override int GetHashCode() => HashCode.Combine(this.Token, this.Description);
+        public override IEnumerable<KeyValuePair<string, object?>> Children
+        {
+            get
+            {
+                yield return new(nameof(this.Token), this.Token);
+            }
+        }
+
+        public override DeclarationErrorSyntax ToRedNode(SyntaxNode? parent) => new(parent, this);
+    }
+
+    /// <summary>
+    /// The error token.
+    /// </summary>
+    public SyntaxToken? Token => this.Green.Token?.ToRedNode(this);
+    /// <summary>
+    /// The error description.
+    /// </summary>
+    public string Description => this.Green.Description;
+    internal override GreenNode Green { get; }
+
+    /// <summary>
+    /// Creates a new instance of the <see cref = "DeclarationErrorSyntax"> type.
+    /// </summary>
+    /// <param name = "parent">
+    /// The parent node of this one.
+    /// </param>
+    /// <param name = "green">
+    /// The wrapped green node.
+    /// </param>
+    internal DeclarationErrorSyntax(SyntaxNode? parent, GreenNode green)
+    {
+        this.Parent = parent;
+        this.Green = green;
+    }
+}
+
+/// <summary>
+/// Represents an expression syntax error in the syntax tree.
+/// </summary>
+public sealed partial class ExpressionErrorSyntax : TypeSyntax
+{
+    new internal sealed partial class GreenNode : TypeSyntax.GreenNode
+    {
+        public SyntaxToken.GreenNode? Token { get; }
+
+        public string Description { get; }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref = "GreenNode"> type.
+        /// </summary>
+        public GreenNode(SyntaxToken.GreenNode? token, string description)
+        {
+            this.Token = token;
+            this.Description = description;
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object? other) => this.Equals(other as SyntaxNode.GreenNode);
+        /// <inheritdoc/>
+        public override bool Equals([AllowNull] SyntaxNode.GreenNode other) => other is GreenNode o && object.Equals(this.Token, o.Token) && object.Equals(this.Description, o.Description);
+        /// <inheritdoc/>
+        public override int GetHashCode() => HashCode.Combine(this.Token, this.Description);
+        public override IEnumerable<KeyValuePair<string, object?>> Children
+        {
+            get
+            {
+                yield return new(nameof(this.Token), this.Token);
+            }
+        }
+
+        public override ExpressionErrorSyntax ToRedNode(SyntaxNode? parent) => new(parent, this);
+    }
+
+    /// <summary>
+    /// The error token.
+    /// </summary>
+    public SyntaxToken? Token => this.Green.Token?.ToRedNode(this);
+    /// <summary>
+    /// The error description.
+    /// </summary>
+    public string Description => this.Green.Description;
+    internal override GreenNode Green { get; }
+
+    /// <summary>
+    /// Creates a new instance of the <see cref = "ExpressionErrorSyntax"> type.
+    /// </summary>
+    /// <param name = "parent">
+    /// The parent node of this one.
+    /// </param>
+    /// <param name = "green">
+    /// The wrapped green node.
+    /// </param>
+    internal ExpressionErrorSyntax(SyntaxNode? parent, GreenNode green)
+    {
+        this.Parent = parent;
+        this.Green = green;
+    }
+}
+
+/// <summary>
 /// A full, parsed module containing all of its declarations.
 /// </summary>
 public sealed partial class ModuleDeclarationSyntax : DeclarationSyntax
@@ -1578,6 +1704,32 @@ public static partial class SyntaxFactory
     /// The constructed syntax node.
     /// </returns>
     public static SyntaxToken Token(Sequence<Token> leadingTrivia, Token token, Sequence<Token> trailingTrivia) => new(null, new(leadingTrivia, token, trailingTrivia));
+    /// <summary>
+    /// Constructs a <see cref = "DeclarationErrorSyntax"/> from the given arguments.
+    /// </summary>
+    /// <param name = "token">
+    /// The error token.
+    /// </param>
+    /// <param name = "description">
+    /// The error description.
+    /// </param>
+    /// <returns>
+    /// The constructed syntax node.
+    /// </returns>
+    public static DeclarationErrorSyntax DeclarationError(SyntaxToken? token, string description) => new(null, new(token?.Green, description));
+    /// <summary>
+    /// Constructs a <see cref = "ExpressionErrorSyntax"/> from the given arguments.
+    /// </summary>
+    /// <param name = "token">
+    /// The error token.
+    /// </param>
+    /// <param name = "description">
+    /// The error description.
+    /// </param>
+    /// <returns>
+    /// The constructed syntax node.
+    /// </returns>
+    public static ExpressionErrorSyntax ExpressionError(SyntaxToken? token, string description) => new(null, new(token?.Green, description));
     /// <summary>
     /// Constructs a <see cref = "ModuleDeclarationSyntax"/> from the given arguments.
     /// </summary>
