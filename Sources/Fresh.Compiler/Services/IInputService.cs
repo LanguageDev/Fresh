@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Fresh.Query;
 using Fresh.Syntax;
 
-namespace Fresh.Compiler;
+namespace Fresh.Compiler.Services;
 
 /// <summary>
 /// The service for setting inputs in the compiler.

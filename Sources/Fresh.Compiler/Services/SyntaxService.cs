@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Fresh.Syntax;
 
-namespace Fresh.Compiler;
+namespace Fresh.Compiler.Services;
 
 public sealed class SyntaxService : ISyntaxService
 {

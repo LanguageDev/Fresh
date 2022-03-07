@@ -11,4 +11,8 @@
     <ProjectReference Include="..\Fresh.Compiler\Fresh.Compiler.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="OmniSharp.Extensions.LanguageServer" Version="0.19.5" />
+  </ItemGroup>
+
 </Project>
