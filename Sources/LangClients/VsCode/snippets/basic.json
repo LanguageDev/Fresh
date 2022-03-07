@@ -1,0 +1,19 @@
+{
+    "Single-line Function": {
+        "prefix": "lfun",
+        "body": [
+            "func ${1:name}(${2:parameters}) = ${3:value};"
+        ],
+        "description": "Define a single-line function."
+    },
+
+    "Multi-line Function": {
+        "prefix": "bfun",
+        "body": [
+            "func ${1:name}(${2:parameters}): ${3:return} {",
+            "    ${4:body}",
+            "}"
+        ],
+        "description": "Define a multi-line function."
+    }
+}

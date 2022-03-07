@@ -1,0 +1,56 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Fresh",
+    "scopeName": "source.fresh",
+	"patterns": [
+		{ "include": "#keywords" },
+		{ "include": "#line_comment" },
+		{ "include": "#builtin_types" },
+		{ "include": "#strings" },
+		{ "include": "#integer_literals" },
+		{ "include": "#boolean_constants" },
+		{ "include": "#identifiers" }
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.control.fresh",
+				"match": "\\b(func|var|val|if|then|else|while|do|return)\\b"
+			}]
+		},
+		"line_comment": {
+			"name": "comment.line.double-slash.fresh",
+			"begin": "//",
+      		"end": "$"
+		},
+		"builtin_types": {
+			"patterns": [{
+				"name": "storage.type.fresh",
+				"match": "\\b(int|int32|bool|unit)\\b"
+			}]
+		},
+		"strings": {
+			"name": "string.quoted.double.fresh",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.fresh",
+					"match": "\\\\."
+				}
+			]
+		},
+		"integer_literals": {
+			"name": "constant.numeric.integer.decimal.fresh",
+      		"match": "\\b[0-9]+\\b"
+		},
+		"identifiers": {
+			"name": "entity.name.function.fresh",
+			"match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+		},
+		"boolean_constants": {
+			"name": "constant.language.boolean.fresh",
+			"match": "\\b(true|false)\\b"
+		}
+	}
+}
