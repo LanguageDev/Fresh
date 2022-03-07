@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>Latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Query\Fresh.Query.Generator\Fresh.Query.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="False" />
+    <ProjectReference Include="..\Query\Fresh.Query\Fresh.Query.csproj" />
+    <ProjectReference Include="..\Syntax\Fresh.Syntax\Fresh.Syntax.csproj" />
+  </ItemGroup>
+  
+</Project>
