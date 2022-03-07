@@ -18,6 +18,11 @@ namespace Fresh.Syntax;
 /// </summary>
 public sealed class Parser
 {
+    // TODO: The whole consumption logic became a bit messy because of error handling
+    // We are always .Take()-ing on errors
+    // Fow now I just made Take() remember the last consumed token in case we run over End
+    // This is definitely NOT a good solution
+
     public static ModuleDeclarationSyntax Parse(IEnumerable<SyntaxToken> tokens)
     {
         var parser = new Parser(tokens.GetEnumerator());
@@ -78,6 +83,7 @@ public sealed class Parser
 
     private readonly IEnumerator<SyntaxToken> tokens;
     private readonly RingBuffer<SyntaxToken.GreenNode> peekBuffer = new();
+    private SyntaxToken.GreenNode lastConsumed;
 
     private SourceText SourceText => this.Peek().Token.SourceText;
 
@@ -89,7 +95,7 @@ public sealed class Parser
     public ModuleDeclarationSyntax ParseModuleDeclaration()
     {
         var declarations = new List<DeclarationSyntax.GreenNode>();
-        while (!this.TryPeek(TokenType.End))
+        while (!this.Peek(TokenType.End))
         {
             declarations.Add(this.ParseDeclaration());
         }
@@ -174,7 +180,7 @@ public sealed class Parser
             var semicol = this.Expect(TokenType.Semicolon);
             body = new ValueSpecifierSyntax.GreenNode(assign, value, semicol);
         }
-        else if (this.TryPeek(TokenType.OpenBrace))
+        else if (this.Peek(TokenType.OpenBrace))
         {
             body = this.ParseBlockExpression(ParseMode.Statement);
         }
@@ -190,7 +196,7 @@ public sealed class Parser
         var openParen = this.Expect(TokenType.OpenParenthesis);
 
         var parameters = new List<ParameterSyntax.GreenNode>();
-        while (!this.TryPeek(TokenType.CloseParenthesis))
+        while (!this.Peek(TokenType.CloseParenthesis))
         {
             var parameterName = this.Expect(TokenType.Identifier);
             var parameterColon = this.Expect(TokenType.Colon);
@@ -212,7 +218,7 @@ public sealed class Parser
         var openToken = this.Expect(open);
 
         var arguments = new List<ArgumentSyntax.GreenNode>();
-        while (!this.TryPeek(close))
+        while (!this.Peek(close))
         {
             var value = this.ParseExpression();
             var keepGoing = this.TryMatch(TokenType.Comma, out var comma);
@@ -344,7 +350,7 @@ public sealed class Parser
         var openBrace = this.Expect(TokenType.OpenBrace);
         var statements = new List<StatementSyntax.GreenNode>();
         ExpressionSyntax.GreenNode? value = null;
-        while (!this.TryPeek(TokenType.CloseBrace))
+        while (!this.Peek(TokenType.CloseBrace))
         {
             if (parseMode == ParseMode.Statement)
             {
@@ -383,7 +389,7 @@ public sealed class Parser
                 {
                     // Parse as an expression
                     var expr = this.ParseExpression();
-                    if (this.TryPeek(TokenType.CloseBrace))
+                    if (this.Peek(TokenType.CloseBrace))
                     {
                         // This is the end of the block, this becomes the value
                         value = expr;
@@ -477,7 +483,7 @@ public sealed class Parser
 
     private bool TryMatch(TokenType tokenType, [MaybeNullWhen(false)] out SyntaxToken.GreenNode token)
     {
-        if (this.TryPeek(tokenType))
+        if (this.Peek(tokenType))
         {
             token = this.Take();
             return true;
@@ -489,20 +495,22 @@ public sealed class Parser
         }
     }
 
-    private bool TryPeek(TokenType tokenType) =>
-        this.TryPeek(0, out var token) && token.Type == tokenType;
+    private bool Peek(TokenType tokenType) => this.Peek().Type == tokenType;
 
     private SyntaxToken.GreenNode Take()
     {
-        this.Peek();
-        return this.peekBuffer.RemoveFront();
+        this.Peek(0);
+        if (this.peekBuffer.Count > 0) this.lastConsumed = this.peekBuffer.RemoveFront();
+        return this.lastConsumed;
     }
 
-    private SyntaxToken.GreenNode Peek()
+    private SyntaxToken.GreenNode Peek(int offset = 0)
     {
-        // NOTE: This should probably never fail when called because there must be an end token
-        var peekResult = this.TryPeek(0, out var t);
-        Debug.Assert(peekResult);
+        if (!this.TryPeek(offset, out var t))
+        {
+            if (this.peekBuffer.Count > 0) return this.peekBuffer[^1];
+            else return this.lastConsumed;
+        }
         return t;
     }
 

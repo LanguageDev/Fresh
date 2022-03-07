@@ -1,20 +1,29 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Fresh.Compiler;
 using Fresh.Compiler.Services;
-using Fresh.LangServer.Services;
+using Fresh.LangServer.Handlers;
 using Fresh.Query.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using OmniSharp.Extensions.LanguageServer.Server;
+using Serilog;
 
 internal static class Program
 {
-    internal static async Task Main(string[] args)
+#pragma warning disable VSTHRD002 // Avoid problematic synchronous waits
+    private static void Main(string[] args) => MainAsync(args).Wait();
+#pragma warning restore VSTHRD002 // Avoid problematic synchronous waits
+
+    internal static async Task MainAsync(string[] args)
     {
-        // TODO: Figure out if we can configure the server alongside the services
         var host = CreateHostBuilder(args).Build();
-        await host.RunAsync();
+        var server = host.Services.GetRequiredService<LanguageServer>();
+        await server.Initialize(CancellationToken.None);
+        await server.WaitForExit;
     }
 
     internal static IHostBuilder CreateHostBuilder(string[] args) => Host
@@ -25,10 +34,9 @@ internal static class Program
         .ConfigureServices(services => services.AddLanguageServer(options => options
             .WithInput(Console.OpenStandardInput())
             .WithOutput(Console.OpenStandardOutput())
-            // TODO: Configure logging
-            .WithHandler<TextDocumentHandler>()
-            .OnInitialize(async (server, request, token) =>
-            {
-                Console.WriteLine("HELLO LANGSERVER");
-            })));
+            .WithLoggerFactory(new LoggerFactory())
+            .ConfigureLogging(loggingBuilder => loggingBuilder
+                .AddLanguageProtocolLogging()
+                .SetMinimumLevel(LogLevel.Debug))
+            .WithHandler<TextDocumentHandler>()));
 }

@@ -184,9 +184,9 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
             .OfType<ISyntaxElement>()
             .Sum(e => e.Width);
 
-        public Sequence<Token> LeadingTrivia => GetFirstToken(this)!.Value.LeadingTrivia;
+        public Sequence<Token> LeadingTrivia => GetFirstToken(this)?.LeadingTrivia ?? Sequence<Token>.Empty;
 
-        public Sequence<Token> TrailingTrivia => GetLastToken(this)!.Value.TrailingTrivia;
+        public Sequence<Token> TrailingTrivia => GetLastToken(this)?.TrailingTrivia ?? Sequence<Token>.Empty;
 
         public virtual CommentGroup? Documentation => null;
 
@@ -291,11 +291,12 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
         SyntaxToken syntaxToken => syntaxToken.Green,
         ISyntaxElement syntaxElement => syntaxElement.Children
             .Select(c => GetFirstToken(c.Value))
-            .First(t => t is not null)!.Value,
+            .FirstOrDefault(t => t is not null),
         IEnumerable enumerable => enumerable
             .Cast<object?>()
             .Select(GetFirstToken)
-            .First(t => t is not null)!.Value,
+            .FirstOrDefault(t => t is not null),
+        null => null,
         _ => throw new InvalidOperationException(),
     };
 
@@ -305,11 +306,11 @@ public abstract class SyntaxNode : ISyntaxElement, IEquatable<SyntaxNode>
         SyntaxToken syntaxToken => syntaxToken.Green,
         ISyntaxElement syntaxElement => syntaxElement.Children
             .Select(c => GetLastToken(c.Value))
-            .Last(t => t is not null)!.Value,
+            .LastOrDefault(t => t is not null),
         IEnumerable enumerable => enumerable
             .Cast<object?>()
             .Select(GetLastToken)
-            .Last(t => t is not null)!.Value,
+            .LastOrDefault(t => t is not null),
         null => null,
         _ => throw new InvalidOperationException(),
     };
