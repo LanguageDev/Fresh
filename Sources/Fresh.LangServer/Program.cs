@@ -20,6 +20,12 @@ internal static class Program
 
     internal static async Task MainAsync(string[] args)
     {
+        Log.Logger = new LoggerConfiguration()
+            .Enrich.FromLogContext()
+            .WriteTo.File("log.txt", rollingInterval: RollingInterval.Day)
+            .MinimumLevel.Verbose()
+            .CreateLogger();
+
         var host = CreateHostBuilder(args).Build();
         var server = host.Services.GetRequiredService<LanguageServer>();
         await server.Initialize(CancellationToken.None);
@@ -34,9 +40,11 @@ internal static class Program
         .ConfigureServices(services => services.AddLanguageServer(options => options
             .WithInput(Console.OpenStandardInput())
             .WithOutput(Console.OpenStandardOutput())
-            .WithLoggerFactory(new LoggerFactory())
             .ConfigureLogging(loggingBuilder => loggingBuilder
+                .AddSerilog(Log.Logger)
                 .AddLanguageProtocolLogging()
                 .SetMinimumLevel(LogLevel.Debug))
+            .WithServices(services => services
+                .AddLogging(loggingBuilder => loggingBuilder.SetMinimumLevel(LogLevel.Trace)))
             .WithHandler<TextDocumentHandler>()));
 }

@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Fresh.Compiler.Services;
 using Fresh.Syntax;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
@@ -31,15 +32,18 @@ internal sealed class TextDocumentHandler : TextDocumentSyncHandlerBase
     // TODO: Make this incremental
     public TextDocumentSyncKind Change { get; } = TextDocumentSyncKind.Full;
 
+    private readonly ILogger<TextDocumentHandler> logger;
     private readonly ILanguageServerFacade server;
     private readonly IInputService inputService;
     private readonly ISyntaxService syntaxService;
 
     public TextDocumentHandler(
+        ILogger<TextDocumentHandler> logger,
         ILanguageServerFacade server,
         IInputService inputService,
         ISyntaxService syntaxService)
     {
+        this.logger = logger;
         this.server = server;
         this.inputService = inputService;
         this.syntaxService = syntaxService;
@@ -61,6 +65,7 @@ internal sealed class TextDocumentHandler : TextDocumentSyncHandlerBase
 
     public override Task<Unit> Handle(DidOpenTextDocumentParams request, CancellationToken cancellationToken)
     {
+        this.logger.LogInformation("Text file opened!");
         var textDocument = request.TextDocument;
         var path = textDocument.Uri.GetFileSystemPath();
         this.inputService.SetSourceText(path, SourceText.FromString(path, textDocument.Text));
@@ -70,6 +75,7 @@ internal sealed class TextDocumentHandler : TextDocumentSyncHandlerBase
 
     public override Task<Unit> Handle(DidChangeTextDocumentParams request, CancellationToken cancellationToken)
     {
+        this.logger.LogInformation("Text file changed!");
         var textDocument = request.TextDocument;
         var path = textDocument.Uri.GetFileSystemPath();
         // TODO: Incremental!
