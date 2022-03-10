@@ -11,13 +11,13 @@ namespace Fresh.Query.Internal;
 
 internal sealed class QuerySystemConfigurator : IQuerySystemConfigurator
 {
-    private readonly IHostBuilder hostBuilder;
+    private readonly IServiceCollection serviceCollection;
     private readonly QuerySystem querySystem = new();
 
-    public QuerySystemConfigurator(IHostBuilder hostBuilder)
+    public QuerySystemConfigurator(IServiceCollection serviceCollection)
     {
-        this.hostBuilder = hostBuilder;
-        this.hostBuilder.ConfigureServices(services => services.AddSingleton<IQuerySystem>(this.querySystem));
+        this.serviceCollection = serviceCollection;
+        this.serviceCollection.AddSingleton<IQuerySystem>(this.querySystem);
     }
 
     public IQuerySystemConfigurator AddInputQueryGroup<TInterface>()
@@ -25,7 +25,7 @@ internal sealed class QuerySystemConfigurator : IQuerySystemConfigurator
     {
         var tInterface = typeof(TInterface);
         var tProxy = GetProxyType(tInterface);
-        this.hostBuilder.ConfigureServices(services => services.AddSingleton(tInterface, tProxy));
+        this.serviceCollection.AddSingleton(tInterface, tProxy);
         return this;
     }
 
@@ -37,12 +37,14 @@ internal sealed class QuerySystemConfigurator : IQuerySystemConfigurator
         var tImpl = typeof(TImpl);
         var tProxy = GetProxyType(tInterface);
 
-        this.hostBuilder.ConfigureServices(services => services
-            // We register the implementation type exactly as is
-            .AddSingleton<TImpl>()
-            // The proxy gets registered through the interface
-            .AddSingleton(provider => (TInterface?)Activator.CreateInstance(tProxy, provider, tImpl)
-                                   ?? throw new InvalidOperationException("Could not instantiate generated proxy")));
+        // We register the implementation type exactly as is
+        this.serviceCollection.AddSingleton<TImpl>();
+
+        // The proxy gets registered through the interface
+        this.serviceCollection.AddSingleton(provider =>
+               (TInterface?)Activator.CreateInstance(tProxy, provider, tImpl)
+            ?? throw new InvalidOperationException("Could not instantiate generated proxy"));
+
         return this;
     }
 

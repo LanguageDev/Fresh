@@ -26,25 +26,21 @@ internal static class Program
             .MinimumLevel.Verbose()
             .CreateLogger();
 
-        var host = CreateHostBuilder(args).Build();
-        var server = host.Services.GetRequiredService<LanguageServer>();
+        var server = await CreateLanguageServer(args);
         await server.Initialize(CancellationToken.None);
         await server.WaitForExit;
     }
 
-    internal static IHostBuilder CreateHostBuilder(string[] args) => Host
-        .CreateDefaultBuilder(args)
-        .ConfigureQuerySystem(system => system
-            .AddInputQueryGroup<IInputService>()
-            .AddQueryGroup<ISyntaxService, SyntaxService>())
-        .ConfigureServices(services => services.AddLanguageServer(options => options
-            .WithInput(Console.OpenStandardInput())
-            .WithOutput(Console.OpenStandardOutput())
-            .ConfigureLogging(loggingBuilder => loggingBuilder
-                .AddSerilog(Log.Logger)
-                .AddLanguageProtocolLogging()
-                .SetMinimumLevel(LogLevel.Debug))
-            .WithServices(services => services
-                .AddLogging(loggingBuilder => loggingBuilder.SetMinimumLevel(LogLevel.Trace)))
-            .WithHandler<TextDocumentHandler>()));
+    internal static Task<LanguageServer> CreateLanguageServer(string[] args) => LanguageServer.From(options => options
+        .WithInput(Console.OpenStandardInput())
+        .WithOutput(Console.OpenStandardOutput())
+        .ConfigureLogging(loggingBuilder => loggingBuilder
+            .AddSerilog(Log.Logger)
+            .AddLanguageProtocolLogging()
+            .SetMinimumLevel(LogLevel.Trace))
+        .WithServices(services => services
+            .ConfigureQuerySystem(system => system
+                .AddInputQueryGroup<IInputService>()
+                .AddQueryGroup<ISyntaxService, SyntaxService>()))
+        .WithHandler<TextDocumentHandler>());
 }
