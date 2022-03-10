@@ -58,7 +58,7 @@
                         "messages",
                         "verbose"
                     ],
-                    "default": "verbose"
+                    "default": "messages"
                 }
             }
         }
