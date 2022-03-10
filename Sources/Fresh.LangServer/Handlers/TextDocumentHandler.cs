@@ -65,9 +65,9 @@ internal sealed class TextDocumentHandler : TextDocumentSyncHandlerBase
 
     public override Task<Unit> Handle(DidOpenTextDocumentParams request, CancellationToken cancellationToken)
     {
-        this.logger.LogInformation("Text file opened!");
         var textDocument = request.TextDocument;
         var path = textDocument.Uri.GetFileSystemPath();
+        this.logger.LogInformation("Handling DidOpenTextDocument for {File}", path);
         this.inputService.SetSourceText(path, SourceText.FromString(path, textDocument.Text));
         this.PublishDiagnostics(textDocument.Uri);
         return Unit.Task;
@@ -75,9 +75,9 @@ internal sealed class TextDocumentHandler : TextDocumentSyncHandlerBase
 
     public override Task<Unit> Handle(DidChangeTextDocumentParams request, CancellationToken cancellationToken)
     {
-        this.logger.LogInformation("Text file changed!");
         var textDocument = request.TextDocument;
         var path = textDocument.Uri.GetFileSystemPath();
+        this.logger.LogInformation("Handling DidChangeTextDocument for {File}", path);
         // TODO: Incremental!
         this.inputService.SetSourceText(path, SourceText.FromString(path, request.ContentChanges.First().Text));
         this.PublishDiagnostics(textDocument.Uri);
@@ -113,6 +113,7 @@ internal sealed class TextDocumentHandler : TextDocumentSyncHandlerBase
             Message = err.Message,
         }));
 
+        this.logger.LogInformation("Publishing {Count} diagnostics for {File}", errors.Count, path);
         this.server.TextDocument.PublishDiagnostics(new()
         {
             Uri = uri,
